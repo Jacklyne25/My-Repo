@@ -1,0 +1,12 @@
+### 1. Intrusion Detection
+```
+from simkit.intrusion_detection import IntrusionDetector
+from simkit.synthetic_data import SyntheticDatasetGenerator
+
+sdg = SyntheticDatasetGenerator()
+X, y = sdg.generate_ids_data(samples=200, features=5)
+
+ids = IntrusionDetector()
+ids.train(X, y)
+preds = ids.predict(X)
+print(ids.report(X, y))
