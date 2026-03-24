@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+{% block title %}Auto-Scheduler Results{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 800px; margin: 0 auto;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <h1 style="color: var(--primary); margin: 0;">⚡ Auto-Scheduler Results</h1>
+        <a href="{% url 'scheduling:dashboard' %}" class="btn">View Timetable</a>
+    </div>
+
+    <!-- Summary Cards -->
+    <div
+        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+        <div
+            style="background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3); border-radius: 0.75rem; padding: 1.25rem; text-align: center;">
+            <div style="font-size: 2rem; font-weight: 700; color: #34d399;">{{ result.scheduled|length }}</div>
+            <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem;">Scheduled</div>
+        </div>
+        <div
+            style="background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); border-radius: 0.75rem; padding: 1.25rem; text-align: center;">
+            <div style="font-size: 2rem; font-weight: 700; color: #fbbf24;">{{ result.skipped|length }}</div>
+            <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem;">Skipped</div>
+        </div>
+        <div
+            style="background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); border-radius: 0.75rem; padding: 1.25rem; text-align: center;">
+            <div style="font-size: 2rem; font-weight: 700; color: #f87171;">{{ result.errors|length }}</div>
+            <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem;">Errors</div>
+        </div>
+    </div>
+
+    <!-- Scheduled Entries -->
+    {% if result.scheduled %}
+    <h3 style="margin-bottom: 0.75rem;">✔ Scheduled Entries</h3>
+    <div style="overflow-x: auto; margin-bottom: 2rem;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.875rem;">
+            <thead>
+                <tr style="border-bottom: 2px solid var(--border); text-align: left;">
+                    <th style="padding: 0.5rem;">Course Unit</th>
+                    <th style="padding: 0.5rem;">Teaching Staff</th>
+                    <th style="padding: 0.5rem;">Room</th>
+                    <th style="padding: 0.5rem;">Day</th>
+                    <th style="padding: 0.5rem;">Time</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in result.scheduled %}
+                <tr style="border-bottom: 1px solid var(--border);">
+                    <td style="padding: 0.5rem;"><strong>{{ entry.course_unit.code }}</strong></td>
+                    <td style="padding: 0.5rem;">{{ entry.lecturer.get_full_name|default:entry.lecturer.username }}</td>
+                    <td style="padding: 0.5rem;">{{ entry.room.name }}</td>
+                    <td style="padding: 0.5rem;">{{ entry.get_day_of_week_display }}</td>
+                    <td style="padding: 0.5rem; white-space: nowrap;">{{ entry.start_time|time:"H:i" }}–{{
+                        entry.end_time|time:"H:i" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    <!-- Skipped -->
+    {% if result.skipped %}
+    <h3 style="color: #fbbf24; margin-bottom: 0.75rem;">⚠ Skipped Course Units</h3>
+    <ul style="list-style: none; padding: 0; margin-bottom: 2rem;">
+        {% for item in result.skipped %}
+        <li
+            style="padding: 0.5rem 0.75rem; border-left: 3px solid #f59e0b; background: rgba(245,158,11,0.07); border-radius: 0 4px 4px 0; margin-bottom: 0.5rem; font-size: 0.875rem;">
+            <strong>{{ item.course_unit.code }}</strong> — {{ item.reason }}
+        </li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+
+    <!-- Errors -->
+    {% if result.errors %}
+    <h3 style="color: #f87171; margin-bottom: 0.75rem;">✕ Errors</h3>
+    <ul style="list-style: none; padding: 0; margin-bottom: 2rem;">
+        {% for error in result.errors %}
+        <li
+            style="padding: 0.5rem 0.75rem; border-left: 3px solid #ef4444; background: rgba(239,68,68,0.07); border-radius: 0 4px 4px 0; margin-bottom: 0.5rem; font-size: 0.875rem;">
+            {{ error }}
+        </li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+
+    <div style="display: flex; gap: 0.75rem; margin-top: 1rem;">
+        <a href="{% url 'scheduling:dashboard' %}" class="btn">View Full Timetable</a>
+        <a href="{% url 'scheduling:manual_schedule' %}" class="btn" style="background: var(--text-muted);">Add More
+            Manually</a>
+    </div>
+</div>
+{% endblock %}

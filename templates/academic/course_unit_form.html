@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if object %}Edit{% else %}Add{% endif %} Course Unit{% endblock %}
+
+{% block content %}
+<div style="max-width: 600px; margin: 2rem auto;">
+    <div class="card">
+        <h1 style="color: var(--primary); margin-bottom: 2rem;">{% if object %}Edit{% else %}Add New{% endif %} Course Unit</h1>
+        
+        <form method="post" style="display: flex; flex-direction: column; gap: 1.5rem;">
+            {% csrf_token %}
+            
+            {% for field in form %}
+            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                <label for="{{ field.id_for_label }}" style="font-weight: 500; color: var(--text-muted);">
+                    {{ field.label }}
+                    {% if field.field.required %}<span style="color: #ef4444;">*</span>{% endif %}
+                </label>
+                {{ field }}
+                {% if field.errors %}
+                <div style="color: #ef4444; font-size: 0.85rem;">{{ field.errors.0 }}</div>
+                {% endif %}
+            </div>
+            {% endfor %}
+            
+            <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                <button type="submit" class="btn" style="flex: 1;">Save Changes</button>
+                <a href="{% url 'academic:hod_course_list' %}" class="btn" 
+                   style="flex: 1; background: var(--card-bg); border: 1px solid var(--border); text-align: center; text-decoration: none; display: flex; align-items: center; justify-content: center;">
+                   Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    input, select {
+        background: var(--bg);
+        color: var(--text);
+        border: 1px solid var(--border);
+        padding: 0.75rem;
+        border-radius: 0.5rem;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    input:focus, select:focus {
+        border-color: var(--primary);
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.2);
+    }
+    /* Simple styling for checkbox lists (programs) */
+    ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.5rem;
+    }
+    li {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 0.25rem;
+    }
+    li input[type="checkbox"] {
+        width: auto;
+    }
+</style>
+{% endblock %}

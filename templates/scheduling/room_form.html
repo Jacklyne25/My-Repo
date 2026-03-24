@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if object %}Edit Room{% else %}Add New Room{% endif %}{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 600px; margin: 0 auto;">
+    <h1 style="color: var(--primary); margin-top: 0;">{% if object %}Edit Room: {{ object.name }}{% else %}Add New Lecture Room{% endif %}</h1>
+    <p style="color: var(--text-muted); margin-bottom: 2rem;">
+        {% if object %}Update the details for this lecture room.{% else %}Enter the details for the new lecture room to be added to the system.{% endif %}
+    </p>
+
+    <form method="post" style="display: flex; flex-direction: column; gap: 1.5rem;">
+        {% csrf_token %}
+        
+        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+            <label for="id_name" style="font-weight: 600; color: var(--text);">Room Name</label>
+            <input type="text" name="name" id="id_name" value="{{ form.name.value|default:'' }}" 
+                   style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 0.5rem; background: var(--bg-dark); color: var(--text);" 
+                   required placeholder="e.g. Lab 1, Room 101">
+            {% if form.name.errors %}
+            <div style="color: #f87171; font-size: 0.85rem;">{{ form.name.errors.0 }}</div>
+            {% endif %}
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+            <label for="id_capacity" style="font-weight: 600; color: var(--text);">Student Capacity</label>
+            <input type="number" name="capacity" id="id_capacity" value="{{ form.capacity.value|default:'' }}" 
+                   style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 0.5rem; background: var(--bg-dark); color: var(--text);" 
+                   required min="1" placeholder="e.g. 50">
+            {% if form.capacity.errors %}
+            <div style="color: #f87171; font-size: 0.85rem;">{{ form.capacity.errors.0 }}</div>
+            {% endif %}
+        </div>
+
+        <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+            <button type="submit" class="btn" style="flex: 1;">
+                {% if object %}Save Changes{% else %}Add Room{% endif %}
+            </button>
+            <a href="{% url 'scheduling:room_list' %}" class="btn" 
+               style="flex: 1; background-color: var(--card-bg); border: 1px solid var(--border); text-align: center; text-decoration: none;">
+               Cancel
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

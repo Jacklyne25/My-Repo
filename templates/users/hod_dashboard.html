@@ -1,0 +1,443 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}HOD Dashboard{% endblock %}
+
+{% block content %}
+<style>
+    body {
+        background: linear-gradient(135deg, #74b9ff 0%, #d1d8e0 100%);
+        background-attachment: fixed;
+        background-position: center;
+    }
+    .dashboard-main-card {
+        background: var(--glass-bg, rgba(255, 255, 255, 0.9)) !important;
+        backdrop-filter: blur(12px);
+    }
+</style>
+<div class="card dashboard-main-card">
+    <h1 style="color: var(--primary); margin-top: 0;">Department Head Dashboard</h1>
+    <p style="color: var(--text-muted); font-size: 1.1rem; margin-bottom: 2rem;">
+        Welcome to the Departmental Scheduling and Attendance Management System.
+    </p>
+
+    <!-- Dashboard Summary Cards -->
+    <div
+        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 2.5rem;">
+        <div
+            style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1)); padding: 1.5rem; border-radius: 0.75rem; border: 1px solid rgba(129, 140, 248, 0.3); text-align: center;">
+            <div
+                style="font-size: 0.9rem; color: #818cf8; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">
+                Total Teaching Staff</div>
+            <div style="font-size: 2.5rem; font-weight: 700; color: var(--text);">{{ total_lecturers|default:0 }}</div>
+        </div>
+        <div
+            style="background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(20, 184, 166, 0.1)); padding: 1.5rem; border-radius: 0.75rem; border: 1px solid rgba(74, 222, 128, 0.3); text-align: center;">
+            <div
+                style="font-size: 0.9rem; color: #4ade80; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">
+                Total Students</div>
+            <div style="font-size: 2.5rem; font-weight: 700; color: var(--text);">{{ total_students|default:0 }}</div>
+        </div>
+        <div
+            style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(234, 88, 12, 0.1)); padding: 1.5rem; border-radius: 0.75rem; border: 1px solid rgba(251, 191, 36, 0.3); text-align: center;">
+            <div
+                style="font-size: 0.9rem; color: #fbbf24; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">
+                Total Courses</div>
+            <div style="font-size: 2.5rem; font-weight: 700; color: var(--text);">{{ total_courses|default:0 }}</div>
+        </div>
+        <div
+            style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(225, 29, 72, 0.1)); padding: 1.5rem; border-radius: 0.75rem; border: 1px solid rgba(248, 113, 113, 0.3); text-align: center;">
+            <div
+                style="font-size: 0.9rem; color: #f87171; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">
+                Classes Today</div>
+            <div style="font-size: 2.5rem; font-weight: 700; color: var(--text);">{{ active_classes_today|default:0 }}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Academic Monitoring & Compliance Section -->
+    <div style="background: rgba(255,255,255,0.05); padding: 1.5rem; border-radius: 1rem; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 2.5rem; display: grid; grid-template-columns: 1fr 300px; gap: 2rem;">
+        <div style="flex: 1;">
+            <h3 style="margin-top: 0; color: var(--primary); font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem;">
+                <span style="font-size: 1.4rem;">📊</span> Monthly Academic Completion Rate
+            </h3>
+            <div style="margin-top: 1rem; position: relative; height: 30px; background: rgba(0,0,0,0.1); border-radius: 15px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1);">
+                <div style="width: {{ completion_rate }}%; height: 100%; background: linear-gradient(90deg, #10b981, #34d399); border-radius: 15px; box-shadow: 0 0 15px rgba(16, 185, 129, 0.4); display: flex; align-items: center; justify-content: center; color: white; font-weight: 800; font-size: 0.85rem;">
+                    {{ completion_rate }}%
+                </div>
+            </div>
+            <p style="margin-top: 0.75rem; font-size: 0.85rem; color: var(--text-muted);">
+                <strong>{{ conducted_sessions_total }}</strong> sessions conducted out of all scheduled past lectures.
+            </p>
+        </div>
+        
+        <div style="background: rgba(239, 68, 68, 0.05); padding: 1.25rem; border-radius: 0.75rem; border: 1px solid rgba(239, 68, 68, 0.1); text-align: center; display: flex; flex-direction: column; justify-content: center;">
+            <div style="font-size: 0.8rem; color: #ef4444; font-weight: 700; text-transform: uppercase; margin-bottom: 0.25rem;">Missed Actions</div>
+            <div style="font-size: 2rem; font-weight: 800; color: #ef4444;">{{ missed_sessions_count }}</div>
+            <p style="font-size: 0.75rem; color: #f87171; margin: 0.25rem 0 0.75rem 0;">Pending "Missed" Capture</p>
+            <form action="{% url 'attendance:mark_missed_sessions' %}" method="post">
+                {% csrf_token %}
+                <button type="submit" class="btn" style="width: 100%; background: #ef4444; color: white; border: none; padding: 0.5rem; font-size: 0.8rem;">Auto-Mark Missed</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Today's Schedule Widget (Full Width) -->
+    <div class="card" style="background-color: #e0f2fe; border: 1px solid #bae6fd; margin-bottom: 2.5rem; padding: 1.5rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h2 style="margin: 0; font-size: 1.25rem; color: var(--primary);">Today's Schedule</h2>
+            <span style="font-size: 0.9rem; color: var(--text-muted);">{{ today_sessions.count }} session{{ today_sessions.count|pluralize }} scheduled</span>
+        </div>
+
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="border-bottom: 1px solid var(--border); text-align: left;">
+                        <th style="padding: 0.75rem 0.5rem; color: var(--text-muted); font-size: 0.85rem;">Time</th>
+                        <th style="padding: 0.75rem 0.5rem; color: var(--text-muted); font-size: 0.85rem;">Course
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for session in today_sessions|slice:":10" %}
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                        <td style="padding: 0.75rem 0.5rem; font-size: 0.9rem;">
+                            {{ session.timetable_entry.start_time|time:"H:i" }} - {{ session.timetable_entry.end_time|time:"H:i" }}
+                        </td>
+                        <td style="padding: 0.75rem 0.5rem; font-size: 0.9rem;">
+                            <strong>{{ session.timetable_entry.course_unit.code }}</strong> — {{ session.timetable_entry.course_unit.name }}
+                            <span
+                                style="color: var(--text-muted); font-size: 0.85rem; display: block; margin-top: 0.3rem;">
+                                👨‍🏫 <strong style="color: var(--primary);">{{ session.timetable_entry.lecturer.get_full_name|default:session.timetable_entry.lecturer.username }}</strong> • 📍 {{ session.timetable_entry.room.name }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="2"
+                            style="padding: 2rem; text-align: center; color: var(--text-muted); font-size: 0.9rem;">
+                            No classes today.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% if today_sessions.count > 10 %}
+            <div style="text-align: center; margin-top: 1rem;">
+                <a href="#" style="font-size: 0.85rem; color: var(--primary); text-decoration: none;">View All
+                    Sessions</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+
+    <!-- Quick Actions Section -->
+    <div style="background-color: rgba(128, 128, 128, 0.1); padding: 1.5rem; border-radius: 0.75rem; border: 1px solid rgba(128, 128, 128, 0.2);">
+        <h2 style="margin: 0 0 1.5rem 0; font-size: 1.25rem; color: var(--text);">Quick Actions</h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
+        <!-- Quick Action: Academic Control -->
+        <div
+            style="background: linear-gradient(135deg, rgba(56, 189, 248, 0.05), rgba(59, 130, 246, 0.1)); padding: 1.5rem; border-radius: 0.5rem; border: 1px solid rgba(59, 130, 246, 0.3);">
+            <h3 style="margin-top: 0; color: #60a5fa;">📘 Academic Control</h3>
+            <p style="color: var(--text-muted);">Manage departmental timetables, teaching staff, and coordinators.</p>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <a href="{% url 'academic:hod_course_list' %}" class="btn">Manage Courses</a>
+                <a href="{% url 'academic:course_group_list' %}" class="btn" style="background-color: var(--card-bg); border: 1px solid var(--border);">Course Groups</a>
+                <a href="{% url 'users:user_list' %}" class="btn"
+                    style="background-color: var(--card-bg); border: 1px solid var(--border);">Manage Members</a>
+                <a href="{% url 'core:create_announcement' %}" class="btn btn-outline"
+                    style="background-color: var(--bg-soft);">📢 Send Announcement</a>
+            </div>
+        </div>
+
+        <!-- Quick Action: Monitoring -->
+        <div
+            style="background: linear-gradient(135deg, rgba(52, 211, 153, 0.05), rgba(16, 185, 129, 0.1)); padding: 1.5rem; border-radius: 0.5rem; border: 1px solid rgba(16, 185, 129, 0.3);">
+            <h3 style="margin-top: 0; color: #34d399;">📊 Monitoring & Reports</h3>
+            <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Analyze attendance summaries and compliance
+                logs.</p>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <button onclick="openAlertsModal()" class="btn"
+                    style="cursor: pointer; display: flex; align-items: center; gap: 0.5rem; border: none; background: var(--primary); color: white; padding: 0.6rem 1.2rem; border-radius: 0.5rem; font-weight: 600; font-size: 0.95rem; transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);"
+                    onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 10px 15px -3px rgba(0,0,0,0.2)'"
+                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 6px -1px rgba(0,0,0,0.1)'">
+                    <span>🔔</span> View Alerts
+                    {% if hod_alerts.count > 0 %}
+                    <span style="background: white; color: var(--primary); border-radius: 10px; padding: 2px 8px; font-size: 0.8rem; font-weight: 800; margin-left: 0.5rem; border: 1px solid rgba(0,0,0,0.05);">{{ hod_alerts.count }}</span>
+                    {% endif %}
+                </button>
+                <button onclick="openAttendanceModal()" class="btn"
+                    style="background-color: var(--card-bg); border: 1px solid var(--border); text-decoration: none; padding: 0.5rem 1rem; border-radius: 0.4rem; color: var(--text); display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                    <span>📊</span> Attendance Today
+                </button>
+                <button onclick="openReportsModal()" class="btn"
+                    style="background-color: var(--card-bg); border: 1px solid var(--border); text-decoration: none; padding: 0.5rem 1rem; border-radius: 0.4rem; color: var(--text); display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                    <span>📄</span> General Reports
+                </button>
+            </div>
+        </div>
+
+
+        <!-- Quick Action: Scheduling -->
+        <div
+            style="background: linear-gradient(135deg, rgba(167, 139, 250, 0.05), rgba(139, 92, 246, 0.1)); padding: 1.5rem; border-radius: 0.5rem; border: 1px solid rgba(139, 92, 246, 0.3); border-top: 2px solid #8b5cf6;">
+            <h3 style="margin-top: 0; color: #818cf8;">🗓 Scheduling</h3>
+            <p style="color: var(--text-muted);">Build the department timetable manually or run the auto-scheduler.</p>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <a href="{% url 'scheduling:dashboard' %}" class="btn"
+                    style="background: linear-gradient(135deg, #6366f1, #8b5cf6);">Open Scheduler</a>
+            </div>
+        </div>
+
+        <!-- Quick Action: Bulk Import -->
+        <div
+            style="background: linear-gradient(135deg, rgba(251, 146, 60, 0.05), rgba(249, 115, 22, 0.1)); padding: 1.5rem; border-radius: 0.5rem; border: 1px solid rgba(249, 115, 22, 0.3);">
+            <h3 style="margin-top: 0; color: #fbbf24;">📦 Bulk Operations</h3>
+            <p style="color: var(--text-muted);">Import students and timetables via CSV.</p>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <a href="{% url 'academic:import_data' %}" class="btn" style="display: inline-block;">Import Data</a>
+            </div>
+        </div>
+        </div>
+    </div>
+</div>
+
+<!-- Premium Alerts Modal -->
+<div id="alertsModal"
+    style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 1000; align-items: center; justify-content: center; padding: 1.5rem;">
+    <div class="card"
+        style="max-width: 600px; width: 100%; max-height: 85vh; overflow-y: auto; padding: 2rem; position: relative; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);">
+        <button onclick="closeAlertsModal()"
+            style="position: absolute; top: 1.5rem; right: 1.5rem; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.5rem;">&times;</button>
+
+        <h2 style="margin: 0 0 1.5rem 0; color: var(--primary); display: flex; align-items: center; gap: 0.75rem;">
+            <span>🔔</span> Compliance & Performance Highlights
+        </h2>
+
+        <div style="display: flex; flex-direction: column; gap: 1rem;">
+            {% for alert in hod_alerts %}
+            <div
+                style="background: rgba(255,255,255,0.03); padding: 1.25rem; border-radius: 0.75rem; border: 1px solid var(--border); display: flex; gap: 1.25rem; align-items: flex-start;">
+                {% if alert.severity == 'CRITICAL' %}
+                <span style="font-size: 1.2rem;">🔴</span>
+                {% elif alert.severity == 'WARNING' %}
+                <span style="font-size: 1.2rem;">🟡</span>
+                {% else %}
+                <span style="font-size: 1.2rem;">🔵</span>
+                {% endif %}
+
+                <div style="flex: 1;">
+                    <div style="font-weight: 600; font-size: 1rem; margin-bottom: 0.25rem;">{{ alert.message }}</div>
+                    <div
+                        style="display: flex; gap: 1rem; align-items: center; font-size: 0.8rem; color: var(--text-muted);">
+                        <span>{{ alert.created_at|timesince }} ago</span>
+                        <span style="background: rgba(255,255,255,0.05); padding: 2px 8px; border-radius: 4px;">{{
+                            alert.get_category_display }}</span>
+                    </div>
+                </div>
+
+                <a href="#"
+                    style="background: var(--primary); color: white; padding: 0.4rem 0.8rem; border-radius: 0.4rem; font-size: 0.8rem; text-decoration: none; font-weight: 500;">Resolve</a>
+            </div>
+            {% empty %}
+            <div style="text-align: center; padding: 3rem 1rem; color: var(--text-muted);">
+                <div style="font-size: 3rem; margin-bottom: 1rem;">🎉</div>
+                <div style="font-size: 1.1rem; font-weight: 500;">All clear!</div>
+                <p style="margin: 0.5rem 0 0 0;">No pending compliance or performance issues detected.</p>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div style="margin-top: 2rem; display: flex; justify-content: space-between; align-items: center;">
+            {% if hod_alerts.count > 0 %}
+            <form action="{% url 'core:mark_all_read' %}" method="post">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.path }}">
+                <button type="submit" class="btn btn-outline" style="color: var(--danger); border-color: rgba(220, 38, 38, 0.2); background: rgba(220, 38, 38, 0.05);">
+                    🗑️ Clear All
+                </button>
+            </form>
+            {% else %}
+            <div></div> <!-- Spacer -->
+            {% endif %}
+            <button onclick="closeAlertsModal()" class="btn"
+                style="background: rgba(255,255,255,0.05); border: 1px solid var(--border);">Close</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    function openAlertsModal() {
+        const modal = document.getElementById('alertsModal');
+        modal.style.display = 'flex';
+    }
+
+    function closeAlertsModal() {
+        const modal = document.getElementById('alertsModal');
+        modal.style.display = 'none';
+    }
+
+    // Close modal when clicking outside
+    window.onclick = function (event) {
+        const alertsModal = document.getElementById('alertsModal');
+        const attendanceModal = document.getElementById('attendanceModal');
+        const reportsModal = document.getElementById('reportsModal');
+        if (event.target == alertsModal) {
+            closeAlertsModal();
+        }
+        if (event.target == attendanceModal) {
+            closeAttendanceModal();
+        }
+        if (event.target == reportsModal) {
+            closeReportsModal();
+        }
+    }
+
+    // Attendance Modal functions
+    function openAttendanceModal() {
+        document.getElementById('attendanceModal').style.display = 'flex';
+    }
+
+    function closeAttendanceModal() {
+        document.getElementById('attendanceModal').style.display = 'none';
+    }
+
+    // Reports Modal functions
+    function openReportsModal() {
+        document.getElementById('reportsModal').style.display = 'flex';
+    }
+
+    function closeReportsModal() {
+        document.getElementById('reportsModal').style.display = 'none';
+    }
+</script>
+
+<!-- General Reports Modal -->
+<div id="reportsModal"
+    style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 1000; align-items: center; justify-content: center; padding: 1.5rem;">
+    <div class="card"
+        style="max-width: 600px; width: 100%; padding: 2.5rem; position: relative; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);">
+        <button onclick="closeReportsModal()"
+            style="position: absolute; top: 1.5rem; right: 1.5rem; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.5rem;">&times;</button>
+
+        <h2 style="margin: 0 0 1.5rem 0; color: var(--primary); display: flex; align-items: center; gap: 0.75rem;">
+            <span>📄</span> General Departmental Reports
+        </h2>
+        <p style="color: var(--text-muted); margin-bottom: 2rem;">Select a report category to generate or view
+            historical data.</p>
+
+        <div
+            style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+            <!-- Attendance Report -->
+            <form action="{% url 'attendance:generate_report' %}" method="post" style="display: block;">
+                {% csrf_token %}
+                <input type="hidden" name="report_name" value="Departmental Attendance Report">
+                <button type="submit" style="width: 100%; border: none; background: none; text-align: left; padding: 0; color: inherit; cursor: pointer;">
+                    <div style="background: rgba(255,255,255,0.03); padding: 1.25rem; border-radius: 0.75rem; border: 1px solid var(--border); transition: all 0.2s;"
+                        onmouseover="this.style.background='rgba(255,255,255,0.06)'; this.style.borderColor='var(--primary)'"
+                        onmouseout="this.style.background='rgba(255,255,255,0.03)'; this.style.borderColor='var(--border)'">
+                        <div
+                            style="font-weight: 600; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                            <span style="color: #4ade80;">📊</span> Attendance Report
+                        </div>
+                        <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0;">Daily/Weekly student attendance summaries.</p>
+                    </div>
+                </button>
+            </form>
+
+            <!-- Teaching Staff Compliance Report -->
+            <form action="{% url 'attendance:generate_report' %}" method="post" style="display: block;">
+                {% csrf_token %}
+                <input type="hidden" name="report_name" value="Teaching Staff Compliance Report">
+                <button type="submit" style="width: 100%; border: none; background: none; text-align: left; padding: 0; color: inherit; cursor: pointer;">
+                    <div style="background: rgba(255,255,255,0.03); padding: 1.25rem; border-radius: 0.75rem; border: 1px solid var(--border); transition: all 0.2s;"
+                        onmouseover="this.style.background='rgba(255,255,255,0.06)'; this.style.borderColor='var(--primary)'"
+                        onmouseout="this.style.background='rgba(255,255,255,0.03)'; this.style.borderColor='var(--border)'">
+                        <div
+                            style="font-weight: 600; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                            <span style="color: #f87171;">⚖️</span> Teaching Staff Compliance
+                        </div>
+                        <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0;">Tracking lesson delivery and submission rates.</p>
+                    </div>
+                </button>
+            </form>
+
+            <!-- Timetable Report -->
+            <form action="{% url 'attendance:generate_report' %}" method="post" style="display: block;">
+                {% csrf_token %}
+                <input type="hidden" name="report_name" value="Timetable & Room Usage Report">
+                <button type="submit" style="width: 100%; border: none; background: none; text-align: left; padding: 0; color: inherit; cursor: pointer;">
+                    <div style="background: rgba(255,255,255,0.03); padding: 1.25rem; border-radius: 0.75rem; border: 1px solid var(--border); transition: all 0.2s;"
+                        onmouseover="this.style.background='rgba(255,255,255,0.06)'; this.style.borderColor='var(--primary)'"
+                        onmouseout="this.style.background='rgba(255,255,255,0.03)'; this.style.borderColor='var(--border)'">
+                        <div
+                            style="font-weight: 600; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                            <span style="color: #6366f1;">📅</span> Timetable Report
+                        </div>
+                        <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0;">Current semester schedule and room usage logs.</p>
+                    </div>
+                </button>
+            </form>
+
+            <!-- Course Performance Summary -->
+            <form action="{% url 'attendance:generate_report' %}" method="post" style="display: block;">
+                {% csrf_token %}
+                <input type="hidden" name="report_name" value="Course Performance Summary">
+                <button type="submit" style="width: 100%; border: none; background: none; text-align: left; padding: 0; color: inherit; cursor: pointer;">
+                    <div style="background: rgba(255,255,255,0.03); padding: 1.25rem; border-radius: 0.75rem; border: 1px solid var(--border); transition: all 0.2s;"
+                        onmouseover="this.style.background='rgba(255,255,255,0.06)'; this.style.borderColor='var(--primary)'"
+                        onmouseout="this.style.background='rgba(255,255,255,0.03)'; this.style.borderColor='var(--border)'">
+                        <div
+                            style="font-weight: 600; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                            <span style="color: #fbbf24;">📈</span> Course Performance
+                        </div>
+                        <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0;">Average attendance and engagement per course.</p>
+                    </div>
+                </button>
+            </form>
+        </div>
+
+        <div style="text-align: right;">
+            <button onclick="closeReportsModal()" class="btn"
+                style="background: rgba(255,255,255,0.05); border: 1px solid var(--border); padding: 0.6rem 2rem;">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- Attendance Overview Modal -->
+<div id="attendanceModal"
+    style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 1000; align-items: center; justify-content: center; padding: 1.5rem;">
+    <div class="card"
+        style="max-width: 500px; width: 100%; padding: 2.5rem; position: relative; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); text-align: center;">
+        <button onclick="closeAttendanceModal()"
+            style="position: absolute; top: 1.5rem; right: 1.5rem; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.5rem;">&times;</button>
+
+        <h2 style="margin: 0 0 2rem 0; color: var(--primary);">Attendance Today</h2>
+
+        <div style="display: flex; flex-direction: column; gap: 1.5rem; margin-bottom: 2rem;">
+            <div
+                style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 0.5rem; border: 1px solid var(--border);">
+                <span style="color: var(--text-muted);">Recorded Teaching Staff Sessions</span>
+                <span style="font-weight: 700; color: #4ade80; font-size: 1.2rem;">{{ recorded_lectures }}</span>
+            </div>
+
+            <div
+                style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 0.5rem; border: 1px solid var(--border);">
+                <span style="color: var(--text-muted);">Pending Attendance</span>
+                <span style="font-weight: 700; color: #fbbf24; font-size: 1.2rem;">{{ pending_attendance }}</span>
+            </div>
+
+            <div style="margin-top: 1rem; padding: 1.5rem; background: rgba(99, 102, 241, 0.05); border-radius: 1rem; border: 1px solid rgba(99, 102, 241, 0.2);">
+                <div style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 0.75rem;">Average Department Attendance</div>
+                <div style="font-size: 3rem; font-weight: 800; color: var(--primary); margin-bottom: 1rem;">{{ avg_attendance_rate }}%</div>
+
+                <div style="width: 100%; height: 12px; background: rgba(255,255,255,0.05); border-radius: 6px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1);">
+                    <div style="width: {{ avg_attendance_rate }}%; height: 100%; background: linear-gradient(90deg, #6366f1, #818cf8); border-radius: 6px; box-shadow: 0 0 15px rgba(99, 102, 241, 0.5);"></div>
+                </div>
+            </div>
+        </div>
+
+        <button onclick="closeAttendanceModal()" class="btn" style="width: 100%; padding: 0.8rem;">Dismiss</button>
+    </div>
+</div>
+{% endblock %}

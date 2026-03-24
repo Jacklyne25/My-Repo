@@ -1,0 +1,113 @@
+Proposed Authentication Flow for DSAMS
+1️
+⃣
+ Public Welcome Page
+Purpose:
+Introduce DSAMS
+Explain its purpose (departmental scheduling & academic monitoring)
+Display institution branding
+Provide:
+Sign In
+Activate Account (Self-Register)
+2️
+⃣
+ Sign-In Page
+Standard login:
+Username
+Password
+Role auto-detected (no manual role selection)
+3️
+⃣
+ Controlled Self-Registration (This is the Key Part)
+Only usernames similar to those already uploaded in bulk lists should be accepted.
+That is exactly right — but we must implement it properly.
+Correct Implementation Approach (Secure)
+Instead of allowing open registration, we do:
+Pre-Registered Users Model
+When the HOD or Admin uploads:
+Student list
+Lecturer list
+Coordinator list
+The system:
+Creates user records
+Sets them as:
+is_active
+ = False
+password = NULL
+account_status
+ = "Not Activated"
+Self-Activation Process
+User clicks:
+ 
+Activate Account
+They enter:
+Institutional email or username
+Registration number (for students)
+Staff ID (for lecturers)
+Course (if needed for validation)
+System checks:
+Does this user already exist in database?
+Is the account inactive?
+Are details matching?
+If 
+✔
+ valid:
+User sets password
+Account becomes active
+If  not
+ valid:
+Reject with message
+❗
+ Why This Is Better Than Free Registration
+If you allow open registration:
+Anyone can create fake accounts
+Role misuse risk
+Administrative burden
+Your approach avoids:
+Manual account creation for every user
+Password sharing
+Fake user injection
+Very clean design.
+Updated Authentication Architecture
+Public Pages
+Welcome page
+Login page
+Activate account page
+Protected Pages
+Dashboard (role-based)
+Timetable
+Attendance
+Reports
+Security Enhancements 
+to
+ Should Include
+To make this academically strong:
+Password hashing (Django default)
+Rate limiting on login attempts
+Email verification (optional)
+Audit logging for account activation
+Strong password validation
+ Role Assignment Logic
+Users do NOT choose roles.
+Roles are:
+Assigned during bulk upload
+Stored in database
+Locked from user modification
+This protects system integrity.
+📊
+ Advantages of This Model
+✔
+ Reduces admin workload
+✔
+ Prevents unauthorized registration
+✔
+ Maintains data integrity
+✔
+ Improves user experience
+✔
+ Scales well to multi-department usage
+⚠
+ Things You Must Clarify in Documentation
+In Chapter 3 or 4, explain:
+“User accounts shall be pre-created through bulk uploads and activated through controlled self-registration mechanisms.”
+This makes it academically strong.

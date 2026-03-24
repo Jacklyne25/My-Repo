@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+
+{% block title %}Lecture Rooms{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <h1 style="color: var(--primary); margin: 0;">Uploaded Lecture Rooms</h1>
+        <div style="display: flex; gap: 0.5rem;">
+            <a href="{% url 'scheduling:create_room' %}" class="btn" style="background: var(--primary);">+ Add Room</a>
+            <a href="{% url 'academic:import_data' %}" class="btn"
+                style="background-color: var(--card-bg); border: 1px solid var(--border);">Back to Import</a>
+        </div>
+    </div>
+
+    {% if messages %}
+    {% for message in messages %}
+    <div style="padding: 1rem; margin-bottom: 1.5rem; border-radius: 0.5rem; background: rgba(34, 197, 94, 0.1); border: 1px solid #22c55e; color: #86efac;">
+        {{ message }}
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1.5rem;">
+        {% for room in rooms %}
+        <div class="card" style="padding: 1.5rem; text-align: center; border: 1px solid var(--border); transition: transform 0.2s;"
+             onmouseover="this.style.transform='translateY(-5px)'; this.style.borderColor='var(--primary)';"
+             onmouseout="this.style.transform='translateY(0)'; this.style.borderColor='var(--border)';"
+        >
+            <div style="font-size: 2rem; margin-bottom: 0.5rem;">🏫</div>
+            <h3 style="margin: 0.5rem 0; color: var(--primary);">{{ room.name }}</h3>
+            <div style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">Capacity: <strong>{{ room.capacity }}</strong></div>
+            
+            <div style="display: flex; gap: 0.5rem; justify-content: center; margin-top: 1rem; border-top: 1px solid var(--border); padding-top: 1rem;">
+                <a href="{% url 'scheduling:edit_room' room.pk %}" style="color: var(--primary); text-decoration: none; font-size: 0.85rem; font-weight: 600;">Edit</a>
+                <span style="color: var(--border);">|</span>
+                <form action="{% url 'scheduling:delete_room' room.pk %}" method="post" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this room?');">
+                    {% csrf_token %}
+                    <button type="submit" style="background: none; border: none; color: #f87171; cursor: pointer; font-family: inherit; font-size: 0.85rem; font-weight: 600; padding: 0;">Delete</button>
+                </form>
+            </div>
+        </div>
+        {% empty %}
+        <div style="grid-column: 1 / -1; padding: 3rem; text-align: center; color: var(--text-muted);">
+            No rooms have been uploaded to the system yet.
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

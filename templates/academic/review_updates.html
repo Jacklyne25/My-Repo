@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block title %}Review Data Updates{% endblock %}
+
+{% block content %}
+<div class="card" style="max_width: 1000px; margin: 0 auto;">
+    <h1 style="color: var(--primary);">Review Changes</h1>
+    <p style="color: var(--text-muted);">The following changes were detected from your uploaded file. Please review them
+        carefully.</p>
+
+    <div style="margin: 2rem 0; overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="background: var(--bg-dark); text-align: left;">
+                    <th style="padding: 1rem; border-bottom: 1px solid var(--border);">Staff ID</th>
+                    <th style="padding: 1rem; border-bottom: 1px solid var(--border);">Name</th>
+                    <th style="padding: 1rem; border-bottom: 1px solid var(--border);">Field</th>
+                    <th style="padding: 1rem; border-bottom: 1px solid var(--border); color: #e74c3c;">Old Value</th>
+                    <th style="padding: 1rem; border-bottom: 1px solid var(--border); color: #2ecc71;">New Value</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for change in changes %}
+                <tr style="border-bottom: 1px solid var(--border);">
+                    <td style="padding: 0.8rem;">{{ change.staff_id }}</td>
+                    <td style="padding: 0.8rem;">{{ change.name }}</td>
+                    <td style="padding: 0.8rem;"><strong>{{ change.field }}</strong></td>
+                    <td style="padding: 0.8rem; color: var(--text-muted); text-decoration: line-through;">{{ change.old
+                        }}</td>
+                    <td style="padding: 0.8rem; font-weight: bold;">{{ change.new }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <form method="post" action="{% url 'academic:bulk_update' %}"
+        style="display: flex; gap: 1rem; justify-content: flex-end;">
+        {% csrf_token %}
+        <input type="hidden" name="confirm_updates" value="true">
+        <a href="{% url 'academic:import_data' %}" class="btn"
+            style="background-color: var(--text-muted); text-decoration: none;">Cancel</a>
+        <button type="submit" class="btn" style="background-color: #2ecc71;">Confirm & Apply Updates</button>
+    </form>
+</div>
+{% endblock %}

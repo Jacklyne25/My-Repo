@@ -1,0 +1,289 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Welcome{% endblock %}
+
+{% block content %}
+
+<section class="welcome-hero animate-fade-in">
+    <div class="hero-text-content">
+
+        ```
+        <h1 class="hero-title">
+            Departmental Scheduling & Academic Monitoring System.
+        </h1>
+        <p class="hero-subtitle">
+            A secure and centralized academic management platform designed to optimize departmental scheduling,
+            strengthen lecture and attendance monitoring, and enhance accountability and academic performance.
+        </p>
+        <div class="hero-actions">
+            <a href="{% url 'login' %}" class="btn btn-primary">
+                Access System
+            </a>
+            <a href="{% url 'users:activate_account' %}" class="btn btn-secondary">
+                Activate Account
+            </a>
+        </div>
+    </div>
+    ```
+
+</section>
+
+<section class="features-section">
+    <div class="section-header">
+        <h2 class="section-title">Core System Capabilities</h2>
+        <p class="section-subtitle">
+            Built to support structured academic coordination and transparent departmental oversight.
+        </p>
+    </div>
+
+    ```
+    <div class="features-grid">
+        <div class="feature-card">
+            <div class="feature-icon schedule">
+                📅
+            </div>
+            <h3>Smart Scheduling</h3>
+            <p>Automated timetable generation with built‑in conflict detection and optimized resource allocation.</p>
+        </div>
+
+        <div class="feature-card">
+            <div class="feature-icon attendance">
+                👥
+            </div>
+            <h3>Lecture & Attendance Monitoring</h3>
+            <p>Real‑time attendance validation and structured lecture session tracking for accountability.</p>
+        </div>
+
+        <div class="feature-card">
+            <div class="feature-icon analytics">
+                📊
+            </div>
+            <h3>Academic Reporting</h3>
+            <p>Performance analytics and structured reporting tools for departmental review and planning.</p>
+        </div>
+    </div>
+    ```
+
+</section>
+
+<section class="security-section">
+    <div class="security-card">
+        <h3>Authorized Institutional Access</h3>
+        <p>
+            Access to DSAMS is restricted to registered students, teaching staff, coordinators, and administrators.
+            All user activities are logged and monitored to ensure compliance and data integrity.
+        </p>
+    </div>
+</section>
+
+<footer class="welcome-footer">
+    <div class="footer-content">
+        <p class="footer-title">Uganda Christian University</p>
+        <p class="footer-sub">A Center of Excellence in the Heart of Africa</p>
+        <p class="copyright">© 2026 DSAMS. All rights reserved.</p>
+    </div>
+</footer>
+
+<style>
+    /* ================= GLOBAL IMPROVEMENTS ================= */
+
+    body {
+        font-family: 'Inter', sans-serif;
+        background-color: #dbeafe;
+        box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.6), inset 0 -2px 4px rgba(0, 0, 0, 0.08);
+    }
+
+    section {
+        padding: 6rem 2rem;
+    }
+
+    /* ================= HERO SECTION ================= */
+
+    .welcome-hero {
+        background: linear-gradient(135deg, #8db7f9 0%, #424e8c 100%);
+        color: #ffffff;
+        text-align: center;
+    }
+
+    .hero-text-content {
+        max-width: 850px;
+        margin: 0 auto;
+    }
+
+    .hero-title {
+        font-size: 3rem;
+        font-weight: 800;
+        margin-bottom: 1.5rem;
+        line-height: 1.2;
+    }
+
+    .hero-subtitle {
+        font-size: 1.15rem;
+        line-height: 1.8;
+        color: #cbd5e1;
+        margin-bottom: 2.5rem;
+    }
+
+    .hero-actions {
+        display: flex;
+        justify-content: center;
+        gap: 1.2rem;
+        flex-wrap: wrap;
+    }
+
+    .btn {
+        padding: 0.85rem 1.8rem;
+        border-radius: 8px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.3s ease;
+    }
+
+    .btn-primary {
+        background-color: #2563eb;
+        color: #ffffff;
+    }
+
+    .btn-primary:hover {
+        background-color: #1d4ed8;
+    }
+
+    .btn-secondary {
+        border: 2px solid #ffffff;
+        color: #ffffff;
+    }
+
+    .btn-secondary:hover {
+        background-color: #ffffff;
+        color: #0f172a;
+    }
+
+    /* ================= FEATURES SECTION ================= */
+
+    .features-section {
+        background-color: #f8f8f9;
+    }
+
+    .section-header {
+        text-align: center;
+        max-width: 700px;
+        margin: 0 auto 4rem auto;
+    }
+
+    .section-title {
+        font-size: 2.2rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+        color: #0f172a;
+    }
+
+    .section-subtitle {
+        color: #64748b;
+        font-size: 1rem;
+        line-height: 1.7;
+    }
+
+    .features-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 2rem;
+        max-width: 1100px;
+        margin: 0 auto;
+    }
+
+    .feature-card {
+        background: #358ce3;
+        padding: 2.5rem 2rem;
+        border-radius: 12px;
+        text-align: center;
+        transition: all 0.3s ease;
+        border: 1px solid #e2e8f0;
+    }
+
+    .feature-card:hover {
+        transform: translateY(-6px);
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08);
+    }
+
+    .feature-icon {
+        font-size: 2rem;
+        margin-bottom: 1.2rem;
+    }
+
+    .feature-card h3 {
+        font-size: 1.25rem;
+        margin-bottom: 0.8rem;
+        color: #00030a;
+    }
+
+    .feature-card p {
+        font-size: 0.95rem;
+        color: #f2f5f8;
+        line-height: 1.6;
+    }
+
+    /* ================= SECURITY SECTION ================= */
+
+    .security-section {
+        background-color: #eef2f7;
+    }
+
+    .security-card {
+        max-width: 800px;
+        margin: 0 auto;
+        background: #ebc4f0;
+        padding: 2.5rem;
+        border-radius: 12px;
+        border-left: 5px solid #2563eb;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+    }
+
+    .security-card h3 {
+        margin-bottom: 1rem;
+        color: #0f172a;
+    }
+
+    .security-card p {
+        color: #056af7;
+        line-height: 2.0;
+    }
+
+    /* ================= FOOTER ================= */
+
+    .welcome-footer {
+        background-color: #358ce3;
+        color: #cbd5e1;
+        text-align: center;
+        padding: 3rem 2rem;
+    }
+
+    .footer-title {
+        font-weight: 700;
+        color: #ffffff;
+    }
+
+    .footer-sub {
+        margin: 0.5rem 0 1.2rem 0;
+        font-size: 0.9rem;
+    }
+
+    .copyright {
+        font-size: 0.8rem;
+        opacity: 0.7;
+    }
+
+    /* ================= RESPONSIVE ================= */
+
+    @media (max-width: 768px) {
+        .hero-title {
+            font-size: 2.2rem;
+        }
+
+        section {
+            padding: 4rem 1.5rem;
+        }
+    }
+</style>
+
+{% endblock %}

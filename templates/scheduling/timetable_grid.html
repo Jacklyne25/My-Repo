@@ -1,0 +1,287 @@
+{% extends 'base.html' %}
+
+{% block title %}Department Timetable{% endblock %}
+
+{% block content %}
+<style>
+    body {
+        background: #e0f2fe !important; /* Sky Blue */
+    }
+
+    .grid-paper {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        padding: 2.5rem;
+        color: #1e293b;
+        overflow: hidden;
+    }
+
+    .grid-header {
+        border-bottom: 2px solid #e2e8f0;
+        padding-bottom: 1.5rem;
+        margin-bottom: 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+    }
+
+    .univ-name {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.15em;
+        color: #64748b;
+        font-weight: 700;
+        margin-bottom: 0.25rem;
+    }
+
+    .timetable-title {
+        font-size: 1.75rem;
+        font-weight: 800;
+        color: #0f172a;
+    }
+
+    .timetable-table {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+    }
+
+    .timetable-table th {
+        background: #f8fafc;
+        color: #475569;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 1rem;
+        border: 1px solid #e2e8f0;
+    }
+
+    .timetable-table td {
+        height: 100px;
+        padding: 0.5rem;
+        border: 1px solid #e2e8f0;
+        vertical-align: top;
+        position: relative;
+    }
+
+    .time-col {
+        width: 100px;
+        background: #f1f5f9 !important;
+        font-weight: 700;
+        color: #334155;
+        font-size: 0.8rem;
+        text-align: center !important;
+        vertical-align: middle !important;
+    }
+
+    .schedule-entry {
+        background: #eff6ff;
+        border-left: 4px solid #3b82f6;
+        border-radius: 4px;
+        padding: 0.65rem;
+        height: 100%;
+        font-size: 0.8rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+        transition: transform 0.1s;
+    }
+
+    .schedule-entry:hover {
+        transform: scale(1.02);
+        z-index: 10;
+        cursor: default;
+    }
+
+    .entry-code {
+        font-weight: 800;
+        color: #1e3a8a;
+    }
+
+    .entry-room {
+        color: #3b82f6;
+        font-weight: 600;
+        font-size: 0.75rem;
+    }
+
+    .entry-lec {
+        color: #64748b;
+        font-size: 0.75rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .delete-overlay {
+        opacity: 0;
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        transition: opacity 0.2s;
+    }
+
+    .timetable-table td:hover .delete-overlay,
+    .timetable-table td:hover .edit-overlay {
+        opacity: 1;
+    }
+
+    .edit-overlay {
+        opacity: 0;
+        position: absolute;
+        top: 5px;
+        right: 30px;
+        transition: opacity 0.2s;
+    }
+
+    @media print {
+        .no-print {
+            display: none !important;
+        }
+
+        .grid-paper {
+            box-shadow: none;
+            border: none;
+            padding: 0;
+            transform: none !important;
+        }
+
+        body {
+            background: white !important;
+        }
+    }
+</style>
+
+<!-- Spacer for fixed navbar -->
+<div style="height: 90px;"></div>
+
+<div class="container-fluid px-4 no-print">
+    <div style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+        <div style="display: flex; gap: 0.75rem;">
+            <a href="{% url 'scheduling:conflict_review' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i> Conflict Review
+            </a>
+            <a href="{% url 'scheduling:manual_schedule' %}" class="btn btn-outline-primary">
+                <i class="fas fa-edit me-1"></i> Edit / Modify Timetable
+            </a>
+        </div>
+        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+            {% if not params.is_published %}
+            <form action="{% url 'scheduling:publish_timetable' %}" method="post" style="margin: 0;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-success">
+                    <i class="fas fa-rocket me-1"></i> Publish Timetable
+                </button>
+            </form>
+            {% else %}
+            <div class="btn btn-success" style="cursor: default;">
+                <i class="fas fa-check-circle me-1"></i> Published
+            </div>
+            {% endif %}
+            <button onclick="window.print()" class="btn btn-secondary">
+                <i class="fas fa-print me-1"></i> Print Timetable
+            </button>
+            <a href="{% url 'scheduling:timetable_list' %}" class="btn btn-outline-primary">
+                <i class="fas fa-list me-1"></i> All Timetables
+            </a>
+            <a href="{% url 'scheduling:dashboard' %}" class="btn btn-outline-dark">
+                <i class="fas fa-home me-1"></i> Workflow Home
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="grid-paper">
+    <div class="grid-header">
+        <div>
+            <div class="univ-name">{{ request.user.department.faculty.name|default:"DSAMS UNIVERSITY" }}</div>
+            <p style="color: var(--text-muted); margin-bottom: 0.5rem;">
+                Official Timetable for <strong>{{ params.get_semester_display }} ({{ params.get_cohort_display }}) {{ params.academic_year }}</strong>
+            </p>
+            <div style="font-size: 0.9rem; color: #64748b; margin-top: 0.35rem;">Department: {{ request.user.department }}</div>
+        </div>
+        <div style="text-align: right; color: #94a3b8; font-size: 0.75rem;">Generated on: {% now "F j, Y" %}</div>
+    </div>
+
+    <div class="no-print" style="margin-bottom: 2rem; background: #f8fafc; padding: 1.5rem; border-radius: 12px; border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 1.5rem;">
+        <div style="font-weight: 700; color: #475569;">
+            <i class="fas fa-filter me-2"></i> Filter View:
+        </div>
+        <form method="get" action="" style="display: flex; gap: 1rem; align-items: center; margin: 0; flex-grow: 1;">
+            <select name="group" class="form-select" style="max-width: 400px; padding: 0.75rem 1rem; border-radius: 8px; font-weight: 600;" onchange="this.form.submit()">
+                <option value="">Entire Department (All Programs & Classes)</option>
+                <optgroup label="Class Groups">
+                    {% for group in course_groups %}
+                    <option value="{{ group.pk }}" {% if selected_group_id == group.pk|stringformat:"s" %}selected{% endif %}>
+                        {{ group.name }} ({{ group.program.code }})
+                    </option>
+                    {% endfor %}
+                </optgroup>
+            </select>
+            {% if selected_group_id %}
+            <a href="?" class="btn btn-outline-secondary btn-sm" style="border-radius: 8px; padding: 0.5rem 1rem;">Clear Filter</a>
+            {% endif %}
+        </form>
+    </div>
+
+    <table class="timetable-table">
+        <thead>
+            <tr>
+                <th class="time-col">Time</th>
+                {% for day in days %}
+                <th>{{ day }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in grid %}
+            <tr>
+                <td class="time-col">{{ row.time }}</td>
+                {% for slot in row.slots %}
+                <td>
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                        {% for entry in slot.entries %}
+                        <div class="schedule-entry" style="{% if entry.teaching_mode == 'ONLINE' %}background: #f0fdf4; border-left-color: #22c55e;{% endif %}">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem;">
+                                <div class="entry-code">{{ entry.course_unit.code }}</div>
+                                {% if not selected_group_id %}
+                                <div style="font-size: 0.6rem; background: rgba(0,0,0,0.06); padding: 0.15rem 0.35rem; border-radius: 4px; font-weight: 800; color: #475569; white-space: nowrap;">{{ entry.course_group.name }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            {% if entry.teaching_mode == 'ONLINE' %}
+                            <div class="entry-room" style="color: #16a34a;">🌐 Online Session</div>
+                            {% else %}
+                            <div class="entry-room">Room: {{ entry.room.name }}</div>
+                            {% endif %}
+                            <div class="entry-lec">{{ entry.lecturer.get_full_name|default:entry.lecturer.username }}</div>
+                            
+                            <div class="no-print edit-overlay">
+                                <a href="{% url 'scheduling:update_entry' entry.pk %}{% if selected_group_id %}?group={{ selected_group_id }}{% endif %}" 
+                                    style="background: #e0e7ff; color: #4338ca; border-radius: 50%; width: 22px; height: 22px; font-size: 10px; display: flex; align-items: center; justify-content: center; text-decoration: none;" 
+                                    title="Reschedule">✎</a>
+                            </div>
+
+                            <div class="no-print delete-overlay">
+                                <form action="{% url 'scheduling:delete_entry' entry.pk %}" method="post">
+                                    {% csrf_token %}
+                                    <button type="submit"
+                                        style="background: #fee2e2; border: none; color: #ef4444; border-radius: 50%; width: 22px; height: 22px; font-size: 10px; cursor: pointer;"
+                                        onclick="return confirm('Remove this entry?')" title="Delete">✕</button>
+                                </form>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="no-print" style="margin-top: 3rem; text-align: center; color: var(--text-muted); font-size: 0.9rem;">
+    <p>All times shown in 24-hour format. Grid updates automatically when manual changes are saved.</p>
+</div>
+{% endblock %}

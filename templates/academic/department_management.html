@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+
+{% block title %}Department Management{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <h1 style="color: var(--primary); margin: 0;">Department Management</h1>
+        <a href="{% url 'academic:faculty_dashboard' %}" class="btn"
+            style="background-color: var(--card-bg); border: 1px solid var(--border);">Back to Dashboard</a>
+    </div>
+
+    <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+            <tr style="text-align: left; border-bottom: 1px solid var(--border);">
+                <th style="padding: 1rem;">Name</th>
+                <th style="padding: 1rem;">Code</th>
+                <th style="padding: 1rem;">Faculty</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for dept in departments %}
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                <td style="padding: 1rem;"><strong>{{ dept.name }}</strong></td>
+                <td style="padding: 1rem;">{{ dept.code }}</td>
+                <td style="padding: 1rem;">{{ dept.faculty.name|default:"Unassigned" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="3" style="padding: 2rem; text-align: center; color: var(--text-muted);">No departments
+                    found.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

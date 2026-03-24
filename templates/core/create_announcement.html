@@ -1,0 +1,226 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Create Communication{% endblock %}
+
+{% block content %}
+<style>
+    body {
+        background-image: linear-gradient(rgba(15, 23, 42, 0.25), rgba(15, 23, 42, 0.25)), url("{% static 'images/bckg.jpg' %}");
+        background-size: cover;
+        background-attachment: fixed;
+        background-position: center;
+    }
+
+    .main-content .container {
+        max-width: 860px;
+    }
+
+    .page-heading h2 {
+        color: white;
+        text-shadow: 0 2px 8px rgba(0,0,0,0.4);
+        font-size: 2.5rem;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+        margin-bottom: 0.5rem;
+    }
+
+    .page-heading p {
+        color: rgba(255,255,255,0.8);
+        font-size: 1.1rem;
+        font-weight: 500;
+        margin-bottom: 2.5rem;
+    }
+
+    .announcement-card {
+        background: rgba(255, 255, 255, 0.97);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border-radius: 1.75rem;
+        padding: 3rem;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.35);
+        border-top: 6px solid #2563eb;
+        max-width: 680px;
+        margin: 0 auto;
+    }
+
+    .form-label-custom {
+        display: block;
+        font-family: 'Outfit', sans-serif;
+        font-weight: 800;
+        color: #475569;
+        font-size: 0.82rem;
+        text-transform: uppercase;
+        letter-spacing: 0.09em;
+        margin-bottom: 0.85rem;
+    }
+
+    .announcement-card select,
+    .announcement-card textarea,
+    .announcement-card input[type="text"] {
+        display: block;
+        width: 100%;
+        padding: 0.85rem 1rem;
+        font-size: 1rem;
+        font-weight: 500;
+        color: #0f172a;
+        background-color: #f8fafc;
+        border: 2px solid #e2e8f0;
+        border-radius: 0.85rem;
+        transition: all 0.2s ease;
+        font-family: 'Inter', sans-serif;
+        outline: none;
+    }
+
+    .announcement-card select:focus,
+    .announcement-card textarea:focus {
+        border-color: #2563eb;
+        background-color: #fff;
+        box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+    }
+
+    .target-type-box {
+        background: #f8fafc;
+        padding: 1.25rem 1.5rem;
+        border-radius: 1rem;
+        border: 2px solid #e2e8f0;
+        margin-bottom: 1.5rem;
+    }
+
+    .form-check { margin-bottom: 0.6rem; display: flex; align-items: center; gap: 0.6rem; }
+    .form-check:last-child { margin-bottom: 0; }
+    .form-check input[type="radio"] { width: 18px; height: 18px; accent-color: #2563eb; cursor: pointer; }
+    .form-check-label { font-weight: 600; color: #334155; cursor: pointer; }
+
+    .mb-group { margin-bottom: 2rem; }
+
+    .actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 1rem;
+        margin-top: 2.5rem;
+        padding-top: 2rem;
+        border-top: 2px solid #f1f5f9;
+    }
+
+    .btn-send {
+        background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        color: white !important;
+        padding: 1rem 2.75rem;
+        border-radius: 1rem;
+        font-weight: 800;
+        font-family: 'Outfit', sans-serif;
+        font-size: 1rem;
+        border: none;
+        cursor: pointer;
+        box-shadow: 0 8px 20px -4px rgba(37, 99, 235, 0.4);
+        transition: all 0.3s;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .btn-send:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 15px 30px -5px rgba(37, 99, 235, 0.5);
+    }
+
+    .btn-cancel {
+        background: white;
+        color: #64748b;
+        border: 2px solid #e2e8f0;
+        padding: 1rem 2rem;
+        border-radius: 1rem;
+        font-weight: 700;
+        font-family: 'Outfit', sans-serif;
+        font-size: 1rem;
+        cursor: pointer;
+        text-decoration: none;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .btn-cancel:hover {
+        background: #f1f5f9;
+        border-color: #cbd5e1;
+    }
+</style>
+
+<div class="page-heading">
+    <h2>Make an Announcement</h2>
+    <p>Broadcast a message to your target audience.</p>
+</div>
+
+<div class="announcement-card">
+    <form method="post" action="{% url 'core:create_announcement' %}">
+        {% csrf_token %}
+
+        <div class="mb-group">
+            <label class="form-label-custom">Target Audience</label>
+
+            {% if form.target_type %}
+            <div class="target-type-box">
+                {% for radio in form.target_type %}
+                <div class="form-check">
+                    {{ radio.tag }}
+                    <label class="form-check-label" for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <div id="program-select-container" {% if form.target_type and form.target_type.value == 'MANAGED_GROUPS' %}style="display: none;"{% endif %}>
+                <label class="form-label-custom" for="{{ form.target_program.id_for_label }}">Select Academic Program</label>
+                {{ form.target_program }}
+            </div>
+
+            {% if form.target_group %}
+                {{ form.target_group }}
+            {% elif not form.target_type and form.target_program %}
+                {{ form.target_program }}
+            {% elif form.target_course_unit %}
+                {{ form.target_course_unit }}
+            {% endif %}
+
+            {% if form.target_program.errors %}
+            <div style="color: #dc2626; font-size: 0.85rem; margin-top: 0.5rem;">{{ form.target_program.errors }}</div>
+            {% endif %}
+        </div>
+
+        <div class="mb-group">
+            <label class="form-label-custom" for="{{ form.message.id_for_label }}">Message Content</label>
+            {{ form.message }}
+            {% if form.message.errors %}
+            <div style="color: #dc2626; font-size: 0.85rem; margin-top: 0.5rem;">{{ form.message.errors }}</div>
+            {% endif %}
+        </div>
+
+        <div class="actions">
+            <a href="javascript:history.back()" class="btn-cancel">Cancel</a>
+            <button type="submit" class="btn-send">Send Announcement</button>
+        </div>
+    </form>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const targetTypeRadios = document.querySelectorAll('input[name="target_type"]');
+        const programContainer = document.getElementById('program-select-container');
+
+        if (targetTypeRadios.length > 0) {
+            function toggleProgramSelect() {
+                const checked = document.querySelector('input[name="target_type"]:checked');
+                if (checked && checked.value === 'PROGRAM') {
+                    programContainer.style.display = 'block';
+                } else {
+                    programContainer.style.display = 'none';
+                }
+            }
+            targetTypeRadios.forEach(r => r.addEventListener('change', toggleProgramSelect));
+            toggleProgramSelect();
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,168 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Student Dashboard{% endblock %}
+
+{% block content %}
+<style>
+    body {
+        background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url("{% static 'images/dsh.jpg' %}");
+        background-size: cover;
+        background-attachment: fixed;
+        background-position: center;
+    }
+    .dashboard-main-card {
+        background: var(--glass-bg, rgba(255, 255, 255, 0.9)) !important;
+        backdrop-filter: blur(12px);
+    }
+</style>
+<div class="card dashboard-main-card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <div>
+            <h1 style="color: var(--primary); margin-top: 0;">Student Dashboard</h1>
+            <p style="color: var(--text-muted); font-size: 1.1rem; margin-bottom: 0;">
+                Welcome, {{ request.user.get_full_name|default:request.user.username }}.
+            </p>
+            <p style="color: var(--text-muted); font-size: 0.9rem;">
+                {{ request.user.department.name }} | {{ request.user.program.name|default:"No Program Assigned" }}
+            </p>
+        </div>
+        <div style="text-align: right;">
+            <div style="font-size: 1.5rem; font-weight: 700; color: var(--text);">{{ today|date:"l" }}</div>
+            <div style="color: var(--text-muted);">{{ today|date:"d M Y" }}</div>
+        </div>
+    </div>
+
+    <!-- Notifications Section -->
+    <div class="card" style="margin-bottom: 2.5rem; border-left: 4px solid var(--primary);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h2 style="margin-top: 0; font-size: 1.25rem; color: var(--primary); display: flex; align-items: center; gap: 0.5rem;">
+                <span>🔔</span> Notifications
+            </h2>
+            {% if alerts.count > 0 %}
+            <form action="{% url 'core:mark_all_read' %}" method="post">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.path }}">
+                <button type="submit" class="btn btn-sm" style="padding: 0.2rem 0.5rem; font-size: 0.8rem; background: rgba(220, 38, 38, 0.1); color: #ef4444; border: 1px solid rgba(220, 38, 38, 0.2); cursor: pointer;">
+                    🗑️ Clear All
+                </button>
+            </form>
+            {% endif %}
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 1rem;">
+            {% for alert in alerts %}
+            <div style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 0.5rem; border: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <div style="font-weight: 600; font-size: 0.95rem;">{{ alert.message }}</div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted);">{{ alert.created_at|timesince }} ago • {{ alert.get_category_display }}</div>
+                </div>
+                {% if alert.severity == 'CRITICAL' %}
+                <span style="color: #f87171;">●</span>
+                {% elif alert.severity == 'WARNING' %}
+                <span style="color: #fbbf24;">●</span>
+                {% else %}
+                <span style="color: #6366f1;">●</span>
+                {% endif %}
+            </div>
+            {% empty %}
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin: 0;">No new notifications.</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Main Grid: Today's Schedule & Attendance -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 1.5rem; margin-bottom: 2.5rem;">
+        
+        <!-- Today's Schedule -->
+        <div class="card" style="padding: 1.5rem;">
+            <h2 style="margin-top: 0; font-size: 1.25rem; color: var(--primary);">Today's Classes</h2>
+            <div style="overflow-y: auto; max-height: 400px;">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tbody>
+                        {% for session in today_sessions %}
+                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                            <td style="padding: 1rem 0;">
+                                <div style="font-weight: 700; color: var(--text);">{{ session.timetable_entry.start_time|time:"H:i" }} - {{ session.timetable_entry.end_time|time:"H:i" }}</div>
+                                <div style="font-size: 1rem; margin: 0.2rem 0;">{{ session.timetable_entry.course_unit.code }}: {{ session.timetable_entry.course_unit.name }}</div>
+                                <div style="font-size: 0.85rem; color: var(--text-muted);">
+                                    👤 {{ session.timetable_entry.lecturer.get_full_name }} • 📍 {{ session.timetable_entry.room.name }}
+                                </div>
+                            </td>
+                            <td style="text-align: right;">
+                                <span style="font-size: 0.75rem; padding: 0.25rem 0.5rem; border-radius: 1rem; background: rgba(99, 102, 241, 0.1); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.2);">
+                                    {{ session.get_status_display }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td style="padding: 2rem; text-align: center; color: var(--text-muted);">No classes scheduled for today.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Attendance Summary -->
+        <div class="card" style="padding: 1.5rem;">
+            <h2 style="margin-top: 0; font-size: 1.25rem; color: var(--primary);">Attendance Overview</h2>
+            <div style="display: flex; flex-direction: column; gap: 1.5rem; margin-top: 1.5rem;">
+                {% if course_attendance %}
+                    {% for item in course_attendance %}
+                    <div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem;">
+                            <span>{{ item.course_code }}</span>
+                            <span style="font-weight: 700;">{{ item.percentage }}%</span>
+                        </div>
+                        <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden;">
+                            <div style="width: {{ item.percentage }}%; height: 100%; background: linear-gradient(90deg, var(--primary), #818cf8); border-radius: 4px;"></div>
+                        </div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.3rem;">
+                            {{ item.present }} present / {{ item.total }} total sessions
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p style="color: var(--text-muted); text-align: center; padding: 2rem;">No attendance records found.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Weekly Timetable Grid -->
+    <div class="card" style="padding: 1.5rem;">
+        <h2 style="margin-top: 0; font-size: 1.25rem; color: var(--primary); margin-bottom: 1.5rem;">Weekly Timetable</h2>
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; min-width: 800px;">
+                <thead>
+                    <tr style="border-bottom: 2px solid var(--border);">
+                        <th style="padding: 1rem; text-align: left; color: var(--text-muted); font-size: 0.85rem; width: 120px;">Time</th>
+                        {% for day in days %}
+                        <th style="padding: 1rem; text-align: center; color: var(--text-muted); font-size: 0.85rem;">{{ day.1 }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in grid %}
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.03);">
+                        <td style="padding: 1rem; font-weight: 600; font-size: 0.85rem; color: var(--text-muted);">{{ row.time }}</td>
+                        {% for slot in row.slots %}
+                        <td style="padding: 0.5rem; text-align: center;">
+                            {% if slot %}
+                            <div style="background: rgba(99, 102, 241, 0.05); border: 1px solid rgba(99, 102, 241, 0.2); padding: 0.5rem; border-radius: 0.5rem; min-height: 60px; display: flex; flex-direction: column; justify-content: center;">
+                                <div style="font-weight: 700; font-size: 0.85rem; color: var(--primary);">{{ slot.course_unit.code }}</div>
+                                <div style="font-size: 0.75rem; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ slot.course_unit.name }}</div>
+                                <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 0.2rem;">📍 {{ slot.room.name }}</div>
+                            </div>
+                            {% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

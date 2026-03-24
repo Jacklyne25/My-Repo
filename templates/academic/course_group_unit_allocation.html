@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card border-0 shadow-lg" style="background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); border-radius: 20px;">
+                <div class="card-header bg-primary text-white text-center py-4" style="border-radius: 20px 20px 0 0;">
+                    <h2 class="mb-0">Allocate Course Units</h2>
+                    <p class="mb-0 text-white-50">Assign units to class group: <strong>{{ object.name }}</strong></p>
+                    <div class="badge bg-light text-primary mt-2">Available Units: {{ total_units_count }}</div>
+                </div>
+                <div class="card-body p-5">
+                    <form method="post" class="needs-validation" novalidate>
+                        {% csrf_token %}
+                        <div class="search-container mb-4">
+                            <div class="search-wrapper">
+                                <span class="search-icon">🔍</span>
+                                <input type="text" id="courseSearch" class="search-input" placeholder="Search by course code or name..." autocomplete="off">
+                            </div>
+                        </div>
+
+                        <div class="courses-grid" id="courseList">
+                                {% for unit in available_units_list %}
+                                <div class="course-card hover-shadow transition-all">
+                                    <input type="checkbox" name="course_units" value="{{ unit.pk }}" id="unit_{{ unit.pk }}"
+                                           {% if unit in object.course_units.all %}checked{% endif %}>
+                                    <label class="fw-semibold text-dark" for="unit_{{ unit.pk }}" style="cursor: pointer; flex: 1;">
+                                        {{ unit.code }} – {{ unit.name }}
+                                    </label>
+                                </div>
+                                {% empty %}
+                                <div class="col-12 text-center py-5">
+                                    <div class="mb-3 text-muted">
+                                        <i class="fas fa-exclamation-circle fa-3x"></i>
+                                    </div>
+                                    <h5 class="text-secondary">No course units found for this department.</h5>
+                                    <p class="text-muted small">Please ensure course units are uploaded and linked to programs in the <strong>{{ request.user.department.name }}</strong> department.</p>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <div class="mt-3 text-muted small">
+                                <i class="fas fa-info-circle me-1"></i> Note: Each student is supposed to undertake utmost 6 course units per semester.
+                            </div>
+                            {% if form.course_units.errors %}
+                            <div class="text-danger mt-2 small">
+                                {{ form.course_units.errors }}
+                            </div>
+                            {% endif %}
+
+                        <div class="d-flex justify-content-between align-items-center mt-5">
+                            <a href="{% url 'academic:course_group_list' %}" class="btn btn-outline-secondary btn-lg px-4" style="border-radius: 12px;">
+                                <i class="fas fa-arrow-left me-2"></i>Back to Groups
+                            </a>
+                            <button type="submit" class="btn btn-primary btn-lg px-5 shadow-sm" style="border-radius: 12px; background: linear-gradient(135deg, #0d6efd 0%, #0043a8 100%); border: none;">
+                                <i class="fas fa-save me-2"></i>Save Allocation
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .courses-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1.5rem;
+        margin-top: 1rem;
+    }
+    @media (max-width: 992px) {
+        .courses-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+    @media (max-width: 576px) {
+        .courses-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+    .course-card {
+        background: #f8f9fa;
+        border: 1px solid var(--border, #e2e8f0);
+        border-radius: 8px;
+        padding: 1.25rem;
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+        cursor: pointer;
+    }
+    .course-card input[type="checkbox"] {
+        margin-top: 0.3rem;
+        width: 1.1rem;
+        height: 1.1rem;
+        cursor: pointer;
+    }
+    .hover-shadow:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        border-color: var(--primary, #0d6efd) !important;
+        background-color: #f0f7ff !important;
+    }
+    .transition-all {
+        transition: all 0.2s ease-in-out;
+    }
+    .fw-semibold { font-weight: 600; }
+    .text-dark { color: var(--text-dark, #0f172a); }
+    
+    .search-container {
+        margin-bottom: 2rem;
+    }
+    .search-wrapper {
+        position: relative;
+        max-width: 500px;
+    }
+    .search-icon {
+        position: absolute;
+        left: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-muted, #64748b);
+        font-size: 1.1rem;
+        pointer-events: none;
+    }
+    .search-input {
+        width: 100%;
+        padding: 0.8rem 1rem 0.8rem 2.8rem;
+        border: 1px solid var(--border, #e2e8f0);
+        border-radius: 8px;
+        font-size: 1rem;
+        color: var(--text-dark, #0f172a);
+        background: #ffffff;
+        outline: none;
+        transition: all 0.2s ease;
+    }
+    .search-input:focus {
+        border-color: var(--primary, #0d6efd);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('courseSearch');
+    const courseCards = document.querySelectorAll('.course-card');
+
+    if(searchInput) {
+        searchInput.addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+
+            courseCards.forEach(card => {
+                const text = card.textContent.toLowerCase();
+                if (text.includes(searchTerm)) {
+                    card.style.display = 'flex';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        });
+    }
+});
+</script>
+{% endblock %}

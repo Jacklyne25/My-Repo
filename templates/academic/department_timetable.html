@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+
+{% block title %}Department Timetable{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <h1 style="color: var(--primary); margin: 0;">Department Timetable</h1>
+        <div>
+            <a href="{% url 'academic:import_data' %}" class="btn"
+                style="background-color: var(--text-muted); margin-right: 0.5rem;">Import Timetable</a>
+            <a href="{% url 'users:hod_dashboard' %}" class="btn">Back to Dashboard</a>
+        </div>
+    </div>
+
+    {% if timetable_entries %}
+    <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
+        <thead>
+            <tr style="text-align: left; border-bottom: 2px solid var(--border);">
+                <th style="padding: 0.75rem;">Day</th>
+                <th style="padding: 0.75rem;">Time</th>
+                <th style="padding: 0.75rem;">Program</th>
+                <th style="padding: 0.75rem;">Course Unit</th>
+                <th style="padding: 0.75rem;">Teaching Staff</th>
+                <th style="padding: 0.75rem;">Venue</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entry in timetable_entries %}
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 0.75rem; font-weight: bold;">{{ entry.get_day_of_week_display }}</td>
+                <td style="padding: 0.75rem;">{{ entry.start_time|time:"H:i" }} - {{ entry.end_time|time:"H:i" }}</td>
+                <td style="padding: 0.75rem;">{{ entry.program.code }}</td>
+                <td style="padding: 0.75rem;">{{ entry.course_unit.code }} - {{ entry.course_unit.name }}</td>
+                <td style="padding: 0.75rem;">{{ entry.lecturer.get_full_name }}</td>
+                <td style="padding: 0.75rem;">{{ entry.room.name }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div
+        style="text-align: center; padding: 3rem 1rem; background: rgba(255,255,255,0.02); border-radius: 0.5rem; border: 1px dashed var(--border);">
+        <p style="color: var(--text-muted); font-size: 1.1rem; margin-bottom: 1rem;">No timetable data has been uploaded
+            yet.</p>
+        <a href="{% url 'academic:import_data' %}" class="btn">Go to Bulk Import</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

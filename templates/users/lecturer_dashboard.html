@@ -1,0 +1,503 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Teaching Staff Dashboard{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Header Summary Stats -->
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 2rem;">
+        <div class="card summary-card stats-courses">
+            <div class="stats-icon">📚</div>
+            <div>
+                <h3 class="card-title-label">Total Courses</h3>
+                <p class="stat-value" style="color: #0369a1;">{{ my_courses.count }}</p>
+            </div>
+        </div>
+        <div class="card summary-card stats-sessions">
+            <div class="stats-icon">⏰</div>
+            <div>
+                <h3 class="card-title-label">Today's Sessions</h3>
+                <p class="stat-value" style="color: #b45309;">{{ today_sessions.count }}</p>
+            </div>
+        </div>
+        <div class="card summary-card stats-verifications">
+            <div class="stats-icon">✅</div>
+            <div style="flex: 1;">
+                <h3 class="card-title-label">Weekly Verifications</h3>
+                <a href="{% url 'attendance:weekly_dashboard' %}" class="btn-colorful btn-green" style="width: 100%; text-align: center;">Open Weekly Board</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Dashboard Grid -->
+    <div class="main-grid-layout">
+        <!-- Mid-Section: Today's Schedule and Notifications -->
+        <section class="card card-schedule section-column">
+            <div class="section-header">
+                <h2 class="section-title" style="color: #4338ca;">Today's Schedule</h2>
+                <span class="date-badge">{{ today|date:"l, d M Y" }}</span>
+            </div>
+            
+            {% if today_sessions %}
+                <div class="items-list">
+                    {% for session in today_sessions %}
+                    <div class="schedule-item">
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                            <div class="time-badge">
+                                {{ session.timetable_entry.start_time|time:"H:i" }}
+                            </div>
+                            <div>
+                                <h3 class="item-name">{{ session.timetable_entry.course_unit.name }}</h3>
+                                <div class="item-meta">
+                                    <span>📍 {{ session.timetable_entry.room.name }}</span>
+                                    <span>👥 {{ session.timetable_entry.program.code }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 0.75rem; align-items: center;">
+                            {% if session.status == 'SUBMITTED' %}
+                                <form action="{% url 'attendance:validate_attendance' session.id %}" method="post" style="display: flex; gap: 0.5rem; align-items: center;">
+                                    {% csrf_token %}
+                                    <div class="duration-input-container">
+                                        <input type="number" name="actual_duration" step="0.5" value="2.0" class="duration-input" title="Actual Duration (hrs)">
+                                        <span style="font-size: 0.7rem; color: #64748b;">hrs</span>
+                                    </div>
+                                    <button type="submit" class="btn-colorful btn-orange btn-sm">Validate</button>
+                                </form>
+                            {% elif session.status == 'SCHEDULED' or session.status == 'LECTURER_CONFIRMED' %}
+                                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                    {% if session.can_interact %}
+                                        {% if session.status == 'SCHEDULED' %}
+                                        <form action="{% url 'attendance:confirm_session' session.id %}" method="post">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn-colorful btn-green btn-sm">Confirm</button>
+                                        </form>
+                                        {% endif %}
+                                        
+                                        <form action="{% url 'attendance:cancel_session' session.id %}" method="post" onsubmit="return confirm('Are you sure you want to cancel this session?')">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn-colorful btn-red btn-sm">Cancel</button>
+                                        </form>
+                        
+                                        <div class="reschedule-container">
+                                            <button onclick="toggleReschedule('{{ session.id }}')" class="btn-colorful btn-blue btn-sm">Reschedule</button>
+                                            <form id="reschedule-form-{{ session.id }}" action="{% url 'attendance:reschedule_session' session.id %}" method="post" class="reschedule-popup hidden">
+                                                {% csrf_token %}
+                                                <input type="date" name="new_date" value="{{ session.date|date:'Y-m-d' }}" required class="reschedule-input">
+                                                <button type="submit" class="btn-colorful btn-green btn-sm">Save</button>
+                                            </form>
+                                        </div>
+                                    {% else %}
+                                        <span style="font-size: 0.75rem; color: #64748b; font-weight: 600; background: #f1f5f9; padding: 0.25rem 0.75rem; border-radius: 1rem; border: 1px solid #e2e8f0;">
+                                            {{ session.interaction_message }}
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            {% else %}
+                                <span class="status-pill status-{{ session.status|lower }}">
+                                    {% if session.status == 'LECTURER_CONFIRMED' %}✅{% elif session.status == 'CANCELLED' %}⭕{% elif session.status == 'MISSED' %}⚠️{% else %}✨{% endif %} 
+                                    {{ session.get_status_display }}
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-state">No lectures scheduled for today.</div>
+            {% endif %}
+        </section>
+
+        <!-- Sidebar: Notifications and Quick Links -->
+        <aside class="sidebar-layout">
+            <section class="card card-notifications full-height">
+                <div class="section-header">
+                    <h2 class="section-title" style="color: #b45309;">🔔 Notifications</h2>
+                    <div class="header-actions">
+                        {% if alerts.count > 0 %}
+                        <form action="{% url 'core:mark_all_read' %}" method="post">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{{ request.path }}">
+                            <button type="submit" class="btn-icon-label" style="color: #ef4444;">🗑️ Clear</button>
+                        </form>
+                        {% endif %}
+                        <a href="{% url 'core:create_announcement' %}" class="btn-icon-label" style="color: #4f46e5;">📢 Send</a>
+                    </div>
+                </div>
+                {% if alerts %}
+                    <div class="items-list">
+                        {% for alert in alerts %}
+                        <div class="notification-item {% if forloop.last %}last{% endif %}">
+                            <div class="noti-header">
+                                <span class="noti-severity-{{ alert.severity|lower }}">{{ alert.get_severity_display }}</span>
+                                <span class="noti-time">{{ alert.created_at|timesince }} ago</span>
+                            </div>
+                            <p class="noti-msg">{{ alert.message }}</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="empty-state-sm">No active notifications.</div>
+                {% endif %}
+            </section>
+        </aside>
+
+        <!-- Lower Section: Weekly Timetable and My Courses -->
+        <section class="card card-timetable">
+            <h2 class="section-title" style="color: #047857; margin-bottom: 1.5rem;">Weekly Timetable</h2>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 120px;">Time</th>
+                            {% for code, name in days %}
+                            <th>{{ name }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in grid %}
+                        <tr>
+                            <td class="time-label">{{ row.time }}</td>
+                            {% for slot in row.slots %}
+                            <td>
+                                {% if slot %}
+                                <div class="timetable-slot">
+                                    <div class="slot-code">{{ slot.course_unit.code }}</div>
+                                    <div class="slot-room">{{ slot.room.name }}</div>
+                                    <div class="program-tag">{{ slot.program.code }}</div>
+                                </div>
+                                {% endif %}
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <aside class="sidebar-layout">
+            <section class="card card-courses full-height">
+                <h2 class="section-title" style="color: #0369a1; margin-bottom: 1.5rem;">My Courses</h2>
+                <div class="items-list">
+                    {% for course in my_courses %}
+                    <a href="{% url 'attendance:course_summary' course.course_unit__id %}" style="text-decoration: none; color: inherit;">
+                        <div class="course-pill">
+                            <div class="course-pill-header">
+                                <span class="course-pill-code">{{ course.course_unit__code }}</span>
+                                <span class="course-pill-action">View</span>
+                            </div>
+                            <div class="course-pill-name">{{ course.course_unit__name }}</div>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+            </section>
+        </aside>
+    </div>
+</div>
+
+<style>
+    body {
+        background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 50%, #3b82f6 100%);
+        background-attachment: fixed;
+    }
+    .dashboard-container {
+        max-width: 1440px;
+        margin: 0 auto;
+        padding-top: 2rem;
+    }
+    .main-grid-layout {
+        display: grid;
+        grid-template-columns: 1fr 380px;
+        gap: 1.5rem;
+        align-items: start;
+    }
+    .card {
+        background: rgba(255, 255, 255, 0.9) !important;
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        border-radius: 1.5rem;
+        padding: 1.5rem;
+        backdrop-filter: blur(20px);
+        box-shadow: 0 15px 35px -5px rgba(0, 0, 0, 0.2);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    }
+    .summary-card {
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+        padding: 1.75rem;
+    }
+    .stats-icon {
+        font-size: 2.25rem;
+        background: white;
+        width: 60px;
+        height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 1.25rem;
+        flex-shrink: 0;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+    }
+    .card-title-label {
+        color: var(--text-muted);
+        font-size: 0.85rem;
+        margin: 0 0 0.25rem 0;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-weight: 600;
+    }
+    .stat-value {
+        font-size: 2.25rem;
+        font-weight: 800;
+        margin: 0;
+        line-height: 1;
+    }
+    .stats-courses { border-top: 6px solid #0ea5e9; }
+    .stats-sessions { border-top: 6px solid #f59e0b; }
+    .stats-verifications { border-top: 6px solid #10b981; }
+
+    /* Component Styles */
+    .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+    }
+    .section-title {
+        margin: 0;
+        font-size: 1.3rem;
+        font-weight: 800;
+    }
+    .date-badge {
+        font-size: 0.9rem;
+        color: var(--text-muted);
+        font-weight: 500;
+        background: rgba(0,0,0,0.05);
+        padding: 0.25rem 0.75rem;
+        border-radius: 1rem;
+    }
+    .items-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+    .schedule-item {
+        background: white;
+        padding: 1.25rem;
+        border-radius: 1.25rem;
+        border: 1px solid #f1f5f9;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: all 0.2s;
+    }
+    .schedule-item:hover {
+        border-color: #cbd5e1;
+        background: #f8fafc;
+    }
+    .time-badge {
+        background: #4f46e5;
+        color: white;
+        padding: 0.5rem 0.75rem;
+        border-radius: 1rem;
+        font-weight: 800;
+        font-size: 0.95rem;
+    }
+    .item-name {
+        margin: 0;
+        font-size: 1.1rem;
+        color: #0f172a;
+        font-weight: 700;
+    }
+    .item-meta {
+        color: #64748b;
+        font-size: 0.85rem;
+        margin-top: 0.2rem;
+        display: flex;
+        gap: 0.75rem;
+    }
+    .status-pill {
+        background: #dcfce7;
+        color: #15803d;
+        padding: 0.5rem 1rem;
+        border-radius: 2rem;
+        font-weight: 700;
+        font-size: 0.8rem;
+    }
+
+    /* Sidebar Notifications */
+    .notification-item {
+        padding: 1rem 0;
+        border-bottom: 1px dashed #e2e8f0;
+    }
+    .notification-item.last { border: none; padding-bottom: 0; }
+    .noti-header {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.25rem;
+    }
+    .noti-severity-critical { color: #ef4444; font-weight: 700; font-size: 0.75rem; }
+    .noti-severity-warning { color: #f59e0b; font-weight: 700; font-size: 0.75rem; }
+    .noti-severity-info { color: #3b82f6; font-weight: 700; font-size: 0.75rem; }
+    .noti-time { font-size: 0.7rem; color: #94a3b8; }
+    .noti-msg { margin: 0; font-size: 0.85rem; line-height: 1.5; color: #334155; }
+
+    /* Timetable Table */
+    .table-container { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 800px; }
+    th {
+        text-align: center;
+        padding: 1.25rem 0.5rem;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: #94a3b8;
+        font-weight: 700;
+    }
+    th:first-child { text-align: left; }
+    td { padding: 0.75rem 0.4rem; vertical-align: top; border-top: 1px solid #f1f5f9; }
+    .time-label { font-size: 0.85rem; font-weight: 800; color: #4f46e5; padding-top: 1.25rem; }
+    
+    .timetable-slot {
+        background: white;
+        border: 1px solid #e2e8f0;
+        padding: 0.75rem;
+        border-radius: 1rem;
+        text-align: center;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    }
+    .slot-code { font-weight: 800; font-size: 0.85rem; color: #1e3a8a; }
+    .slot-room { font-size: 0.7rem; color: #64748b; margin-top: 0.2rem; }
+    .program-tag {
+        font-size: 0.6rem;
+        background: #f1f5f9;
+        color: #475569;
+        display: inline-block;
+        padding: 0.1rem 0.4rem;
+        border-radius: 0.4rem;
+        margin-top: 0.5rem;
+        font-weight: 700;
+    }
+
+    /* Course Pill */
+    .course-pill {
+        background: white;
+        padding: 1.25rem;
+        border-radius: 1.25rem;
+        border: 1px solid #f1f5f9;
+        transition: all 0.2s;
+    }
+    .course-pill:hover { border-color: #0ea5e9; transform: scale(1.02); }
+    .course-pill-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem; }
+    .course-pill-code { font-weight: 800; font-size: 1rem; color: #0369a1; }
+    .course-pill-action { font-size: 0.7rem; background: #e0f2fe; color: #0369a1; padding: 0.2rem 0.6rem; border-radius: 0.5rem; font-weight: 700; }
+    .course-pill-name { font-size: 0.85rem; color: #64748b; }
+
+    /* Helpers */
+    .btn-colorful {
+        padding: 0.6rem 1rem;
+        border-radius: 1rem;
+        font-weight: 700;
+        text-decoration: none;
+        font-size: 0.85rem;
+        display: inline-block;
+        transition: all 0.2s;
+    }
+    .btn-blue { background: #4f46e5; color: white; }
+    .btn-orange { background: #f59e0b; color: white; }
+    .btn-green { background: #10b981; color: white; }
+    .btn-red { background: #ef4444; color: white; }
+    .btn-colorful:hover { filter: brightness(1.1); transform: translateY(-2px); }
+    
+    .btn-icon-label {
+        background: none;
+        border: none;
+        font-size: 0.8rem;
+        font-weight: 700;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+    .empty-state, .empty-state-sm { text-align: center; color: #94a3b8; padding: 3rem; font-style: italic; }
+    .empty-state-sm { padding: 1.5rem; font-size: 0.9rem; }
+
+    .card-schedule { border-left: 8px solid #4338ca; }
+    .card-timetable { border-left: 8px solid #047857; }
+    .card-notifications { border-left: 8px solid #b45309; }
+    .card-courses { border-left: 8px solid #0369a1; }
+
+    /* Reschedule & Validation Styles */
+    .reschedule-container { position: relative; }
+    .reschedule-popup {
+        position: absolute;
+        top: 100%;
+        right: 0;
+        background: white;
+        padding: 1rem;
+        border-radius: 1rem;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        z-index: 100;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        min-width: 200px;
+    }
+    .reschedule-input {
+        padding: 0.5rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.5rem;
+        width: 100%;
+    }
+    .hidden { display: none !important; }
+    
+    .duration-input-container {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        background: #f1f5f9;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.5rem;
+    }
+    .duration-input {
+        width: 50px;
+        border: none;
+        background: transparent;
+        font-weight: 700;
+        text-align: center;
+        color: #1e3a8a;
+    }
+    .duration-input:focus { outline: none; }
+    
+    .btn-sm { padding: 0.3rem 0.6rem; font-size: 0.75rem; }
+</style>
+
+<script>
+    function toggleReschedule(id) {
+        const form = document.getElementById('reschedule-form-' + id);
+        form.classList.toggle('hidden');
+        
+        // Close others if open
+        document.querySelectorAll('.reschedule-popup').forEach(f => {
+            if (f.id !== 'reschedule-form-' + id) {
+                f.classList.add('hidden');
+            }
+        });
+    }
+
+    // Close on click outside
+    document.addEventListener('click', function(event) {
+        if (!event.target.closest('.reschedule-container')) {
+            document.querySelectorAll('.reschedule-popup').forEach(f => f.classList.add('hidden'));
+        }
+    });
+</script>
+{% endblock %}

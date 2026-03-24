@@ -1,0 +1,270 @@
+{% load static %}
+
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DSAMS - {% block title %}{% endblock %}</title>
+
+
+    <!-- Google Fonts -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <style>
+        /* ================= COLOR SYSTEM (INSTITUTIONAL STANDARD) ================= */
+        :root {
+            --primary: #2563eb;
+            /* Institutional Blue */
+            --primary-dark: #1d4ed8;
+            --primary-light: #dbeafe;
+
+            --bg-main: #f4f6f9;
+            --bg-white: #ffffff;
+            --bg-soft: #eef2f7;
+
+            --text-dark: #0f172a;
+            --text-muted: #64748b;
+
+            --border: #e2e8f0;
+            --success: #16a34a;
+            --danger: #dc2626;
+        }
+
+        /* ================= RESET ================= */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-dark);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            line-height: 1.6;
+        }
+
+        h1,
+        h2,
+        h3,
+        h4 {
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            width: 100%;
+        }
+
+        /* ================= NAVBAR ================= */
+        nav {
+            background: #e9d5ff;
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 0;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+        }
+
+        .nav-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            font-size: 1.4rem;
+            font-weight: 700;
+            text-decoration: none;
+            color: var(--text-dark);
+        }
+
+        .nav-brand img {
+            height: 56px;
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .nav-user {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        /* ================= BUTTON SYSTEM ================= */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.6rem 1.2rem;
+            border-radius: 6px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            border: none;
+            font-size: 0.9rem;
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: #ffffff;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-dark);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--primary);
+            color: var(--primary);
+        }
+
+        .btn-outline:hover {
+            background: var(--primary-light);
+        }
+
+        /* ================= MAIN CONTENT ================= */
+        .main-content {
+            flex: 1;
+            padding-top: 6.5rem;
+            padding-bottom: 3rem;
+        }
+
+        /* ================= CARD STANDARD ================= */
+        .card {
+            background: var(--bg-white);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.03);
+        }
+
+        /* ================= UTILITIES ================= */
+        .text-muted {
+            color: var(--text-muted);
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        /* ================= RESPONSIVE ================= */
+        @media (max-width: 768px) {
+            .nav-links {
+                gap: 0.6rem;
+            }
+
+            .nav-user {
+                display: none;
+            }
+
+            .container {
+                padding: 0 1.2rem;
+            }
+        }
+    </style>
+
+
+</head>
+
+<body>
+
+
+    <!-- ================= NAVIGATION ================= -->
+    <nav>
+        <div class="container nav-content">
+
+            <a href="/" class="nav-brand">
+                <img src="{% static 'images/ucu_logo.png' %}" alt="UCU Logo">
+                <span> DSAMS -Structured Scheduling. Accountable Academics-</span>
+            </a>
+
+            <div class="nav-links">
+                <!-- Theme Toggle -->
+                <button id="themeToggleBtn" class="btn btn-outline" style="padding: 0.4rem 0.8rem; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; cursor: pointer;" title="Toggle Light/Dark Mode">
+                    🌓
+                </button>
+
+                {% if user.is_authenticated %}
+                {% load notification_tags %}
+                {% get_unread_alerts_count user as unread_count %}
+                <a href="{% url 'core:notifications' %}" class="btn {% if unread_count > 0 %}btn-primary{% else %}btn-outline{% endif %}" style="position: relative;">
+                    🔔
+                    {% if unread_count > 0 %}
+                    <span style="position: absolute; top: -5px; right: -5px; background: var(--danger); color: white; border-radius: 50%; padding: 2px 6px; font-size: 0.7rem;">{{ unread_count }}</span>
+                    {% endif %}
+                </a>
+                <span class="nav-user">
+                    {% if user.role == 'HOD' and user.department %}
+                        {{ user.get_role_display }} ({{ user.department.name }})
+                    {% else %}
+                        {{ user.username }} ({{ user.get_role_display }})
+                    {% endif %}
+                </span>
+                <form action="{% url 'logout' %}" method="post" style="display:inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline">Logout</button>
+                </form>
+                {% else %}
+                <a href="{% url 'login' %}" class="btn btn-primary">Sign In</a>
+                <a href="{% url 'users:activate_account' %}" class="btn btn-outline">Activate</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <!-- ================= PAGE CONTENT ================= -->
+    <main class="main-content">
+        <div class="container">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    {% block extra_js %}{% endblock %}
+
+    <!-- Theme Toggle Script -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const themeBtn = document.getElementById('themeToggleBtn');
+            // If they click the toggle, randomly change standard colors to demonstrate toggle functionality
+            // For full dark mode, usually we toggle a class on body like .dark-mode that changes CSS vars.
+            themeBtn.addEventListener('click', () => {
+                const isDark = document.body.dataset.theme === 'dark';
+                if (isDark) {
+                    document.body.dataset.theme = 'light';
+                    document.documentElement.style.setProperty('--bg-main', '#f4f6f9');
+                    document.documentElement.style.setProperty('--bg-white', '#ffffff');
+                    document.documentElement.style.setProperty('--glass-bg', 'rgba(255, 255, 255, 0.9)');
+                } else {
+                    document.body.dataset.theme = 'dark';
+                    document.documentElement.style.setProperty('--bg-main', '#0f172a');
+                    document.documentElement.style.setProperty('--bg-white', '#1e293b');
+                    document.documentElement.style.setProperty('--glass-bg', 'rgba(15, 23, 42, 0.9)');
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>

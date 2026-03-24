@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<style>
+    body {
+        background: linear-gradient(135deg, #70a1ff 0%, #778ca3 100%);
+        background-attachment: fixed;
+        min-height: 100vh;
+    }
+
+    .glass-card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 20px;
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+    }
+
+    .timetable-card {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        border-radius: 18px;
+        border: none;
+        overflow: hidden;
+    }
+
+    .timetable-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+    }
+
+    .status-badge {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        padding: 5px 10px;
+        border-radius: 20px;
+    }
+
+    .btn-action {
+        border-radius: 10px;
+        padding: 8px 16px;
+        font-weight: 500;
+        transition: all 0.2s;
+    }
+</style>
+
+<!-- Spacer for fixed navbar -->
+<div style="height: 100px;"></div>
+
+<div class="container pb-5">
+    <div class="glass-card p-4 mb-4 d-flex justify-content-between align-items-center">
+        <div>
+            <h2 class="fw-bold mb-1 text-dark" style="font-family: 'Outfit', sans-serif;">
+                <i class="fas fa-archive me-2" style="color: #4b7bec;"></i> Saved Timetables
+            </h2>
+            <p class="text-muted mb-0">Manage and review your generated departmental schedules.</p>
+        </div>
+        <a href="{% url 'scheduling:dashboard' %}" class="btn btn-light shadow-sm btn-action">
+            <i class="fas fa-arrow-left me-1"></i> Dashboard
+        </a>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm border-0" role="alert" style="border-radius: 12px;">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    {% if timetables %}
+    <div class="row g-4">
+        {% for tt in timetables %}
+        <div class="col-md-6 col-lg-4">
+            <div class="card timetable-card h-100 shadow-sm">
+                <div class="card-body p-4 d-flex flex-column">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h5 class="fw-bold text-dark mb-1" style="font-family: 'Outfit', sans-serif;">{{ tt.get_cohort_display }}</h5>
+                            <div class="text-muted small">
+                                <i class="far fa-calendar-alt me-1"></i> {{ tt.academic_year }} &middot; Sem {{ tt.semester }}
+                            </div>
+                        </div>
+                        <div class="d-flex flex-column align-items-end gap-1">
+                            {% if tt.is_active %}
+                                <span class="badge bg-success status-badge">Active Draft</span>
+                            {% else %}
+                                <span class="badge bg-secondary status-badge">Archive</span>
+                            {% endif %}
+                            
+                            {% if tt.is_published %}
+                                <span class="badge bg-primary status-badge">Published</span>
+                            {% else %}
+                                <span class="badge bg-warning text-dark status-badge">Draft</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="p-3 bg-light rounded-3 mb-4">
+                        <div class="d-flex align-items-center text-dark small mb-2">
+                            <i class="fas fa-layer-group me-2" style="color: #4b7bec;"></i>
+                            <span class="fw-bold">{{ tt.entries.count }} Scheduled Sessions</span>
+                        </div>
+                        <div class="d-flex align-items-center text-muted x-small">
+                            <i class="far fa-clock me-2"></i>
+                            <span>Created: {{ tt.created_at|date:"d M Y, H:i" }}</span>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2 mt-auto">
+                        <a href="{% url 'scheduling:timetable_grid_pk' tt.pk %}"
+                           class="btn btn-primary btn-action flex-grow-1">
+                            <i class="fas fa-external-link-alt me-1"></i> View Full Grid
+                        </a>
+                        <button type="button" class="btn btn-outline-danger btn-action"
+                                data-bs-toggle="modal" data-bs-target="#deleteModal{{ tt.pk }}">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Delete Confirmation Modal -->
+        <div class="modal fade" id="deleteModal{{ tt.pk }}" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow" style="border-radius: 20px; overflow: hidden;">
+                    <div class="modal-body p-4 text-center">
+                        <div class="mb-4">
+                            <i class="fas fa-exclamation-triangle fa-3x text-danger"></i>
+                        </div>
+                        <h4 class="fw-bold mb-3">Delete Timetable?</h4>
+                        <p class="text-muted mb-4 px-3">
+                            Are you sure you want to permanently delete the schedule for <br>
+                            <strong>{{ tt.get_cohort_display }} ({{ tt.academic_year }})</strong>?
+                        </p>
+                        
+                        <div class="alert alert-danger mx-3 py-2 border-0" style="border-radius: 12px; font-size: 0.85rem;">
+                            <strong>Note:</strong> This will also remove all {{ tt.entries.count }} scheduled sessions.
+                        </div>
+
+                        <div class="d-flex gap-2 mt-4 px-3">
+                            <button type="button" class="btn btn-light btn-action flex-grow-1" data-bs-dismiss="modal">Cancel</button>
+                            <form method="post" action="{% url 'scheduling:delete_timetable' tt.pk %}" class="flex-grow-1">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-danger btn-action w-100">
+                                    Confirm Delete
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% else %}
+    <div class="glass-card text-center py-5 mt-4">
+        <div class="mb-4 text-muted">
+            <i class="fas fa-calendar-times fa-4x opacity-25"></i>
+        </div>
+        <h4 class="text-secondary fw-bold">No Timetables Found</h4>
+        <p class="text-muted mb-4">You haven't generated any departmental schedules yet.</p>
+        <a href="{% url 'scheduling:dashboard' %}" class="btn btn-primary btn-action px-5 shadow-sm">
+            <i class="fas fa-plus me-2"></i> Start New Scheduling Process
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

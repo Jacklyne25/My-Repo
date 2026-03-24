@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load custom_filters %}
+
+{% block title %}Capture Attendance{% endblock %}
+
+{% block content %}
+<style>
+    body {
+        background-image: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url("{% static 'images/4.png' %}");
+        background-size: cover;
+        background-attachment: fixed;
+        background-position: center;
+    }
+    .attendance-container {
+        max-width: 900px;
+        margin: 2rem auto;
+    }
+    .glass-card {
+        background: rgba(255, 255, 255, 0.9) !important;
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 1.5rem;
+        padding: 2.5rem;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+    }
+    .attendance-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0 0.5rem;
+    }
+    .attendance-table th {
+        text-align: left;
+        padding: 1rem;
+        color: var(--text-muted);
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        border-bottom: 2px solid var(--border);
+    }
+    .student-row {
+        background: rgba(255, 255, 255, 0.05);
+        transition: transform 0.2s, background 0.2s;
+    }
+    .student-row:hover {
+        background: rgba(255, 255, 255, 0.1);
+        transform: scale(1.01);
+    }
+    .student-row td {
+        padding: 1.25rem 1rem;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    }
+</style>
+
+<div class="attendance-container">
+    <div class="card glass-card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <div>
+            <h1 style="color: var(--primary); margin: 0;">Capture Attendance</h1>
+            <p style="color: var(--text-muted); margin: 0.5rem 0 0 0;">
+                {{ session.timetable_entry.course_unit.code }} - {{ session.date }}
+            </p>
+        </div>
+        <a href="{% url 'attendance:session_list' %}" class="btn"
+            style="background-color: var(--card-bg); border: 1px solid var(--border);">Cancel</a>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        <div
+            style="background: rgba(255,255,255,0.02); padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem; border: 1px solid var(--border);">
+            <table class="attendance-table">
+                <thead>
+                    <tr>
+                        <th style="width: 30%;">Registration No</th>
+                        <th>Student Name</th>
+                        <th style="text-align: center; width: 100px;">Present</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for student in students %}
+                    <tr class="student-row">
+                        <td style="font-weight: 700; color: var(--primary);">{{ student.username }}</td>
+                        <td style="font-weight: 500;">{{ student.get_full_name }}</td>
+                        <td style="text-align: center;">
+                            <input type="checkbox" name="present_students" value="{{ student.id }}" {% if existing_records|get_item:student.id %}checked{% endif %}
+                                style="width: 1.5rem; height: 1.5rem; cursor: pointer; accent-color: var(--primary);">
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div style="text-align: right;">
+            <button type="submit" class="btn" style="padding: 0.75rem 2rem;">Save Records</button>
+        </div>
+    </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,398 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Course Management{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('courseSearch');
+    const tableRows = document.querySelectorAll('tbody tr');
+    
+    // Quick filtering logic
+    searchInput.addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase().trim();
+        
+        tableRows.forEach(row => {
+            const courseName = row.cells[0].textContent.toLowerCase();
+            const courseCode = row.cells[1].textContent.toLowerCase();
+            
+            if (courseName.includes(searchTerm) || courseCode.includes(searchTerm)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    });
+
+    // Enhance UI focus experience
+    searchInput.addEventListener('focus', () => {
+        searchInput.style.borderColor = 'var(--primary)';
+        searchInput.style.boxShadow = '0 0 0 4px rgba(37, 99, 235, 0.15)';
+    });
+
+    searchInput.addEventListener('blur', () => {
+        searchInput.style.borderColor = 'var(--border)';
+        searchInput.style.boxShadow = 'none';
+    });
+});
+</script>
+{% endblock %}
+
+{% block content %}
+<style>
+    :root {
+        --core-bg: rgba(37, 99, 235, 0.08);
+        --core-text: #3b82f6;
+        --core-border: rgba(37, 99, 235, 0.2);
+
+        --elective-bg: rgba(16, 185, 129, 0.08);
+        --elective-text: #10b981;
+        --elective-border: rgba(16, 185, 129, 0.2);
+
+        --foundational-bg: rgba(139, 92, 246, 0.08);
+        --foundational-text: #a78bfa;
+        --foundational-border: rgba(139, 92, 246, 0.2);
+        
+        --glass-bg: rgba(255, 255, 255, 0.96);
+    }
+
+    body {
+        background: linear-gradient(135deg, #87CEEB 0%, #f4f6f9 100%);
+        background-attachment: fixed;
+        background-position: center;
+        font-family: 'Inter', sans-serif;
+    }
+    
+    .main-content .container {
+        max-width: 1400px !important;
+        width: 95% !important;
+    }
+    
+    .dashboard-main-card {
+        background: var(--glass-bg, rgba(255, 255, 255, 0.96)) !important;
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        margin: 3rem auto;
+        padding: 3.5rem;
+        border-radius: 1.5rem;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    }
+
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        margin-bottom: 2.5rem;
+        padding-bottom: 2rem;
+        border-bottom: 2px solid #f1f5f9;
+        flex-wrap: wrap;
+        gap: 1.5rem;
+    }
+
+    h1 {
+        font-family: 'Outfit', sans-serif;
+        color: #1e293b;
+        margin: 0;
+        font-size: 2.75rem;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+        line-height: 1;
+    }
+
+    .header-desc {
+        color: #64748b;
+        margin-top: 0.75rem;
+        font-size: 1.15rem;
+        font-weight: 500;
+    }
+
+    .table-container {
+        margin-top: 2rem;
+        border-radius: 1rem;
+        overflow-x: auto;
+        border: 1px solid #e2e8f0;
+        background: white;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+
+    table {
+        width: 100%;
+        min-width: 1200px;
+        border-collapse: collapse;
+    }
+
+    th {
+        padding: 1.5rem 1.25rem;
+        text-align: left;
+        background: #f8fafc;
+        color: #475569;
+        font-family: 'Outfit', sans-serif;
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 0.8rem;
+        letter-spacing: 0.12em;
+        border-bottom: 2px solid #edf2f7;
+    }
+
+    td {
+        padding: 1.5rem 1.25rem;
+        border-bottom: 1px solid #f1f5f9;
+        color: #334155;
+        font-size: 1rem;
+        line-height: 1.5;
+    }
+
+    tr:last-child td {
+        border-bottom: none;
+    }
+
+    tr:hover td {
+        background-color: #fcfdfe;
+    }
+
+    .course-title {
+        font-family: 'Outfit', sans-serif;
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #0f172a;
+        display: block;
+        margin-bottom: 0.2rem;
+    }
+
+    .course-meta {
+        font-size: 0.85rem;
+        color: #64748b;
+        font-weight: 500;
+    }
+
+    #courseSearch {
+        width: 100%;
+        padding: 1.1rem 1.1rem 1.1rem 3.75rem;
+        background: #f8fafc;
+        border: 2px solid #e2e8f0;
+        border-radius: 1rem;
+        color: #1e293b;
+        font-size: 1.05rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+
+    .search-icon {
+        position: absolute;
+        left: 1.5rem;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 1.4rem;
+        color: #94a3b8;
+    }
+
+    .badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.45rem 1rem;
+        border-radius: 0.75rem;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    .badge-core { background: var(--core-bg); color: var(--core-text); border: 1px solid var(--core-border); }
+    .badge-elective { background: var(--elective-bg); color: var(--elective-text); border: 1px solid var(--elective-border); }
+    .badge-foundational { background: var(--foundational-bg); color: var(--foundational-text); border: 1px solid var(--foundational-border); }
+
+    .btn-premium {
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        color: white !important;
+        border-radius: 0.85rem;
+        padding: 0.9rem 1.75rem;
+        font-family: 'Outfit', sans-serif;
+        font-weight: 700;
+        font-size: 1rem;
+        box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.3);
+        transition: all 0.3s ease;
+        border: none;
+        cursor: pointer;
+    }
+
+    .btn-premium:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 20px 25px -5px rgba(37, 99, 235, 0.4);
+    }
+
+    .btn-secondary {
+        background: white;
+        border: 1px solid #e2e8f0;
+        color: #475569 !important;
+        border-radius: 0.85rem;
+        padding: 0.9rem 1.5rem;
+        font-family: 'Outfit', sans-serif;
+        font-weight: 600;
+        transition: all 0.2s;
+    }
+
+    .btn-secondary:hover {
+        background: #f8fafc;
+        border-color: #cbd5e1;
+    }
+
+    .btn-action-small {
+        padding: 0.5rem 0.85rem;
+        border-radius: 0.6rem;
+        font-weight: 700;
+        font-size: 0.8rem;
+        text-decoration: none;
+        transition: all 0.2s;
+        font-family: 'Outfit', sans-serif;
+    }
+
+    .btn-edit { color: #2563eb; background: rgba(37, 99, 235, 0.05); border: 1px solid rgba(37, 99, 235, 0.1); }
+    .btn-edit:hover { background: rgba(37, 99, 235, 0.1); }
+
+    .btn-delete { color: #dc2626; background: rgba(220, 38, 38, 0.05); border: 1px solid rgba(220, 38, 38, 0.1); }
+    .btn-delete:hover { background: rgba(220, 38, 38, 0.1); }
+
+    .staff-avatar {
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        background: #f1f5f9;
+        color: #475569;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.9rem;
+        font-weight: 800;
+        font-family: 'Outfit', sans-serif;
+    }
+
+    select.assign-select {
+        padding: 0.6rem 0.75rem;
+        border-radius: 0.75rem;
+        border: 1px solid #e2e8f0;
+        background: #f8fafc;
+        font-family: 'Inter', sans-serif;
+        font-weight: 500;
+        font-size: 0.85rem;
+        outline: none;
+    }
+</style>
+
+<div class="card dashboard-main-card">
+    <div class="page-header">
+        <div>
+            <h1>Course Management</h1>
+            <p class="header-desc">Academic units, classification, and faculty assignments.</p>
+        </div>
+        <div style="display: flex; gap: 1rem; align-items: center;">
+            <a href="{% url 'academic:add_course' %}" class="btn-premium">+ Add Course Unit</a>
+            <a href="{% url 'users:hod_dashboard' %}" class="btn-secondary">Overview</a>
+        </div>
+    </div>
+
+    {% if messages %}
+    <div style="margin-bottom: 2.5rem;">
+        {% for message in messages %}
+        <div style="display: flex; align-items: center; gap: 1rem; padding: 1.25rem 1.5rem; border-radius: 1rem; background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; font-weight: 600;">
+            <span style="font-size: 1.2rem;">✅</span>
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div style="position: relative; margin-bottom: 2.5rem;">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="courseSearch" placeholder="Search by course name, unit code, or category...">
+    </div>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 30%;">Course Unit</th>
+                    <th style="width: 10%;">Code</th>
+                    <th style="width: 15%;">Category</th>
+                    <th style="width: 10%;">Hours</th>
+                    <th style="width: 20%;">Teaching Staff</th>
+                    <th style="text-align: right; width: 15%;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for course in courses %}
+                <tr>
+                    <td>
+                        <span class="course-title">{{ course.name }}</span>
+                        <span class="course-meta">{{ course.get_course_type_display }}</span>
+                    </td>
+                    <td><code style="background: #f1f5f9; padding: 0.2rem 0.4rem; border-radius: 4px; font-weight: 700; color: #475569;">{{ course.code }}</code></td>
+                    <td>
+                        {% if course.course_category == 'CORE' %}
+                            <span class="badge badge-core">Core</span>
+                        {% elif course.course_category == 'ELECTIVE' %}
+                            <span class="badge badge-elective">Elective</span>
+                        {% elif course.course_category == 'FOUNDATIONAL' %}
+                            <span class="badge badge-foundational">Foundational</span>
+                        {% else %}
+                            <span class="badge" style="background: #f1f5f9; color: #64748b;">{{ course.get_course_category_display }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span style="font-weight: 800; font-size: 1.1rem; color: #0f172a;">{{ course.required_contact_hours }}</span>
+                        <small style="color: #94a3b8; font-weight: 700; text-transform: uppercase; font-size: 0.65rem; margin-left: 0.1rem;">hrs</small>
+                    </td>
+                    <td>
+                        {% if course.lecturer %}
+                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                            <div class="staff-avatar">
+                                {{ course.lecturer.username|slice:":1"|upper }}
+                            </div>
+                            <div style="display: flex; flex-direction: column;">
+                                <span style="font-weight: 700; font-size: 0.95rem; color: #1e293b;">{{ course.lecturer.get_full_name|default:course.lecturer.username }}</span>
+                                {% if course.lecturer.lecturer_profile.academic_rank %}
+                                    <span style="font-size: 0.75rem; color: #64748b; font-weight: 600;">{{ course.lecturer.lecturer_profile.get_academic_rank_display }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% else %}
+                        <span style="color: #cbd5e1; font-style: italic; font-size: 0.9rem; font-weight: 500;">Unassigned</span>
+                        {% endif %}
+                    </td>
+                    <td style="text-align: right;">
+                        <div style="display: flex; gap: 0.6rem; justify-content: flex-end; align-items: center;">
+                            <a href="{% url 'academic:edit_course' course.pk %}" class="btn-action-small btn-edit">Edit</a>
+                            
+                            <form action="{% url 'academic:delete_course' course.pk %}" method="post" style="display: inline;" onsubmit="return confirm('Ensure this unit is not scheduled. Delete permanently?')">
+                                {% csrf_token %}
+                                <button type="submit" class="btn-action-small btn-delete">✕</button>
+                            </form>
+
+                            <div style="width: 1px; height: 1.5rem; background: #e2e8f0; margin: 0 0.25rem;"></div>
+
+                            <form action="{% url 'academic:assign_lecturer' course.pk %}" method="post" style="display: flex; gap: 0.35rem;">
+                                {% csrf_token %}
+                                <select name="lecturer_id" required class="assign-select">
+                                    <option value="">Staff...</option>
+                                    {% for lecturer in lecturers %}
+                                    <option value="{{ lecturer.id }}" {% if course.lecturer == lecturer %}selected{% endif %}>{{ lecturer.get_full_name|default:lecturer.username }}</option>
+                                    {% endfor %}
+                                </select>
+                                <button type="submit" class="btn" style="background: #0f172a; color: white; padding: 0.6rem 0.85rem; border-radius: 0.75rem; font-size: 0.8rem; font-weight: 700; border: none; cursor: pointer;">Set</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div style="margin-top: 3.5rem; text-align: center; border-top: 2px solid #f1f5f9; padding-top: 2.5rem;">
+        <a href="{% url 'users:hod_dashboard' %}" style="color: #64748b; text-decoration: none; font-size: 0.95rem; font-weight: 700; font-family: 'Outfit', sans-serif; display: inline-flex; align-items: center; gap: 0.5rem;">
+            ← Return to Dashboard
+        </a>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+
+{% block title %}User Management{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <h1 style="color: var(--primary); margin: 0;">User Management</h1>
+        <a href="{% url 'sysadmin:dashboard' %}" class="btn"
+            style="background-color: var(--card-bg); border: 1px solid var(--border);">Back to Dashboard</a>
+    </div>
+
+    {% if messages %}
+    {% for message in messages %}
+    <div
+        style="padding: 1rem; margin-bottom: 1.5rem; border-radius: 0.5rem; background: {% if message.tags == 'success' %}rgba(34, 197, 94, 0.1){% else %}rgba(239, 68, 68, 0.1){% endif %}; border: 1px solid {% if message.tags == 'success' %}#22c55e{% else %}#ef4444{% endif %}; color: {% if message.tags == 'success' %}#86efac{% else %}#fca5a5{% endif %};">
+        {{ message }}
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+            <tr style="text-align: left; border-bottom: 1px solid var(--border);">
+                <th style="padding: 1rem;">Username</th>
+                <th style="padding: 1rem;">Role</th>
+                <th style="padding: 1rem;">Department</th>
+                <th style="padding: 1rem;">Status</th>
+                <th style="padding: 1rem;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in users %}
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                <td style="padding: 1rem;">
+                    <strong>{{ user.username }}</strong><br>
+                    <small style="color: var(--text-muted);">{{ user.email }}</small>
+                </td>
+                <td style="padding: 1rem;">
+                    <form action="{% url 'sysadmin:user_change_role' user.pk %}" method="post"
+                        style="display: flex; gap: 0.5rem;">
+                        {% csrf_token %}
+                        <select name="role"
+                            style="background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 0.25rem; padding: 0.25rem;">
+                            {% for role_val, role_label in user.Role.choices %}
+                            <option value="{{ role_val }}" {% if user.role == role_val %}selected{% endif %}>{{ role_label }}</option>
+                            {% endfor %}
+                        </select>
+                        <button type="submit" class="btn"
+                            style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">Update</button>
+                    </form>
+                </td>
+                <td style="padding: 1rem;">{{ user.department|default:"-" }}</td>
+                <td style="padding: 1rem;">
+                    {% if user.is_active %}
+                    <span
+                        style="color: #22c55e; background: rgba(34, 197, 94, 0.1); padding: 0.25rem 0.5rem; border-radius: 1rem; font-size: 0.8rem;">Active</span>
+                    {% else %}
+                    <span
+                        style="color: #ef4444; background: rgba(239, 68, 68, 0.1); padding: 0.25rem 0.5rem; border-radius: 1rem; font-size: 0.8rem;">Inactive</span>
+                    {% endif %}
+                </td>
+                <td style="padding: 1rem;">
+                    <form action="{% url 'sysadmin:user_toggle_status' user.pk %}" method="post"
+                        style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn"
+                            style="background-color: {% if user.is_active %}#ef4444{% else %}#22c55e{% endif %}; width: 100px;">
+                            {% if user.is_active %}Deactivate{% else %}Activate{% endif %}
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {% if is_paginated %}
+    <div style="margin-top: 2rem; display: flex; justify-content: center; gap: 1rem;">
+        {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}" class="btn">Previous</a>
+        {% endif %}
+        <span style="align-self: center;">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}" class="btn">Next</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

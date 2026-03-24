@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if object %}Edit{% else %}Add{% endif %} Course Group{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 600px; margin: 0 auto;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <h1 style="color: var(--primary); margin: 0;">{% if object %}Edit{% else %}Add{% endif %} Course Group</h1>
+        <a href="{% url 'academic:course_group_list' %}" class="btn" style="background-color: var(--card-bg); border: 1px solid var(--border);">Back to List</a>
+    </div>
+
+    <form method="post" style="display: flex; flex-direction: column; gap: 1.5rem;">
+        {% csrf_token %}
+        
+        {% for field in form %}
+        <div>
+            <label for="{{ field.id_for_label }}" style="display: block; margin-bottom: 0.5rem; color: var(--text-muted); font-size: 0.9rem;">
+                {{ field.label }}
+            </label>
+            {{ field }}
+            {% if field.errors %}
+            <div style="color: #ff5f5f; font-size: 0.8rem; margin-top: 0.3rem;">
+                {{ field.errors }}
+            </div>
+            {% endif %}
+            {% if field.help_text %}
+            <div style="color: var(--text-muted); font-size: 0.75rem; margin-top: 0.3rem;">
+                {{ field.help_text }}
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+
+        <div style="margin-top: 1rem; padding-top: 1.5rem; border-top: 1px solid var(--border); display: flex; justify-content: flex-end;">
+            <button type="submit" class="btn" style="background-color: var(--primary); padding: 0.75rem 2rem;">
+                {% if object %}Save Changes{% else %}Create Group{% endif %}
+            </button>
+        </div>
+    </form>
+</div>
+
+<style>
+    input[type="text"], select {
+        width: 100%;
+        padding: 0.75rem;
+        background: var(--bg-dark);
+        border: 1px solid var(--border);
+        border-radius: 0.5rem;
+        color: var(--text);
+        outline: none;
+        transition: border-color 0.2s;
+    }
+    input[type="text"]:focus, select:focus {
+        border-color: var(--primary);
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,325 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if is_create %}Add New User{% else %}Edit User - {{ target_user.get_full_name|default:target_user.username }}{% endif %}{% endblock %}
+
+{% block content %}
+<style>
+    :root {
+        --glass-bg: rgba(255, 255, 255, 0.96);
+    }
+
+    body {
+        background: linear-gradient(135deg, #87CEEB 0%, #f4f6f9 100%);
+        background-attachment: fixed;
+        background-position: center;
+        font-family: 'Inter', sans-serif;
+    }
+
+    .dashboard-main-card {
+        background: var(--glass-bg, rgba(255, 255, 255, 0.96)) !important;
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        max-width: 850px;
+        margin: 4rem auto;
+        padding: 4rem;
+        border-radius: 2rem;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    }
+
+    .page-header {
+        margin-bottom: 3.5rem;
+        padding-bottom: 2rem;
+        border-bottom: 2px solid #f1f5f9;
+    }
+
+    h1 {
+        font-family: 'Outfit', sans-serif;
+        color: #1e293b;
+        margin: 0;
+        font-size: 2.75rem;
+        font-weight: 800;
+        letter-spacing: -0.04em;
+    }
+
+    .form-group {
+        margin-bottom: 2.25rem;
+    }
+
+    label {
+        display: block;
+        font-family: 'Outfit', sans-serif;
+        font-weight: 800;
+        color: #475569;
+        margin-bottom: 0.85rem;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 1.1rem 1.4rem;
+        background: #f8fafc;
+        border: 2px solid #e2e8f0;
+        border-radius: 1rem;
+        font-size: 1.05rem;
+        font-weight: 600;
+        color: #0f172a;
+        outline: none;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        font-family: 'Inter', sans-serif;
+    }
+
+    .form-control:focus {
+        border-color: #2563eb;
+        background: white;
+        box-shadow: 0 0 0 5px rgba(37, 99, 235, 0.1);
+    }
+
+    .section-title {
+        font-family: 'Outfit', sans-serif;
+        font-size: 1.4rem;
+        color: #2563eb;
+        margin-bottom: 1.75rem;
+        font-weight: 800;
+        display: flex;
+        align-items: center;
+        gap: 0.85rem;
+        letter-spacing: -0.02em;
+    }
+
+    .profile-card {
+        background: #f8fafc;
+        padding: 2.5rem;
+        border-radius: 1.5rem;
+        border: 1px solid #e2e8f0;
+        margin-top: 1.5rem;
+        box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.05);
+    }
+
+    .btn-premium {
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        color: white !important;
+        padding: 1.25rem 3.5rem;
+        border-radius: 1.25rem;
+        font-weight: 800;
+        text-decoration: none;
+        font-family: 'Outfit', sans-serif;
+        font-size: 1.15rem;
+        border: none;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 10px 20px -5px rgba(37, 99, 235, 0.4);
+    }
+
+    .btn-premium:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 25px 30px -10px rgba(37, 99, 235, 0.5);
+        filter: brightness(1.1);
+    }
+
+    .btn-premium:active {
+        transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+        background: white;
+        color: #64748b;
+        border: 1px solid #e2e8f0;
+        padding: 1.1rem 2rem;
+        border-radius: 1.1rem;
+        font-weight: 700;
+        text-decoration: none;
+        font-family: 'Outfit', sans-serif;
+        transition: all 0.2s;
+    }
+
+    .btn-secondary:hover {
+        background: #f1f5f9;
+        color: #334155;
+        border-color: #cbd5e1;
+    }
+</style>
+
+<div class="card dashboard-main-card">
+    <div class="page-header">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h1>{% if is_create %}Register Member{% else %}Edit User Profile{% endif %}</h1>
+            <a href="{% url 'users:user_list' %}" class="btn-secondary">Cancel</a>
+        </div>
+        <p style="color: #64748b; margin-top: 1rem; font-weight: 600; font-size: 1.1rem;">
+            {% if is_create %}Enter full credentials to grant system access to a new member of {{ department.name }}.{% else %}Updating credentials for <strong>{{ target_user.get_full_name|default:target_user.username }}</strong>{% endif %}
+        </p>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+
+        {% if form.errors %}
+        <div style="background: #fef2f2; border: 2px solid #fee2e2; color: #b91c1c; padding: 2rem; border-radius: 1.25rem; margin-bottom: 3rem; font-weight: 700; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+            <div style="font-size: 1.1rem; margin-bottom: 0.5rem;">⚠️ System couldn't save changes:</div>
+            <ul style="margin: 0; padding-left: 1.5rem; font-size: 0.95rem;">
+                {% for field, errors in form.errors.items %}
+                    {% for error in errors %}
+                        <li>{{ field|title }}: {{ error }}</li>
+                    {% endfor %}
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2.5rem;">
+            {% if is_create %}
+            <div class="form-group" style="grid-column: span 2;">
+                <label for="{{ form.username.id_for_label }}">Departmental ID (Reg No / Staff ID)</label>
+                {{ form.username }}
+                <p style="font-size: 0.85rem; color: #64748b; margin-top: 0.75rem; font-weight: 500;">* This will be the unique identifier for system login.</p>
+            </div>
+            {% endif %}
+
+            <div class="form-group">
+                <label for="{{ form.first_name.id_for_label }}">Legal First Name</label>
+                {{ form.first_name }}
+            </div>
+            <div class="form-group">
+                <label for="{{ form.last_name.id_for_label }}">Legal Last Name</label>
+                {{ form.last_name }}
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.email.id_for_label }}">Institutional Email Address</label>
+            {{ form.email }}
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2.5rem;">
+            <div class="form-group">
+                <label for="{{ form.role.id_for_label }}">Institutional Role</label>
+                {{ form.role }}
+            </div>
+            <div class="form-group">
+                <label for="{{ form.phone_number.id_for_label }}">Safe Contact Number</label>
+                {{ form.phone_number }}
+            </div>
+        </div>
+
+        <!-- Student & Coordinator Specific Fields -->
+        <div id="student-fields" class="profile-card" style="display: none;">
+            <div class="section-title"><span>🎓</span> Academic Registry Data</div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2.5rem; margin-bottom: 2rem;">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label>Registration Number</label>
+                    {{ form.registration_no }}
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label>Access Number</label>
+                    {{ form.access_no }}
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2.5rem; margin-bottom: 2rem;">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label>Registry Enrollment Date</label>
+                    {{ form.enrollment_date }}
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label>Assigned Class Group</label>
+                    {{ form.course_group }}
+                </div>
+            </div>
+
+            <div id="coordinator-id-field" class="form-group" style="margin-bottom: 0;">
+                <label>Coordinator Privilege ID</label>
+                {{ form.coordinator_id }}
+                <p style="font-size: 0.85rem; color: #64748b; margin-top: 0.75rem; font-weight: 500;">* Auto-formatted unique ID required for coordinating the selected class group.</p>
+            </div>
+        </div>
+
+        <!-- Teaching Staff Specific Fields -->
+        <div id="lecturer-fields" class="profile-card" style="display: none;">
+            <div class="section-title"><span>👨‍🏫</span> Faculty Allocation Profile</div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2.5rem; margin-bottom: 2rem;">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label>Employment Status</label>
+                    {{ form.employment_type }}
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label>Domain Specialization</label>
+                    {{ form.specialization }}
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2.5rem;">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label>Target Min Load (CH/Week)</label>
+                    {{ form.min_weekly_load }}
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label>Upper Limit Load (CH/Week)</label>
+                    {{ form.max_weekly_load }}
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-top: 5rem; padding-top: 3rem; border-top: 2px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center;">
+            {% if not is_create %}
+            <button type="button" 
+                onclick="if(confirm('SECURITY WARNING: Permanently delete account for {{ target_user.username }}? This will remove all records.')) { document.getElementById('delete-form').submit(); }"
+                style="background: #fef2f2; color: #dc2626; border: 2px solid #fee2e2; padding: 1.1rem 2.5rem; border-radius: 1.15rem; cursor: pointer; font-weight: 800; font-family: 'Outfit', sans-serif; transition: all 0.2s;">
+                Delete Account
+            </button>
+            {% else %}
+            <div></div>
+            {% endif %}
+            
+            <button type="submit" class="btn-premium">
+                {% if is_create %}Finalize Registration{% else %}Commit Profile Changes{% endif %}
+            </button>
+        </div>
+    </form>
+
+    {% if not is_create %}
+    <form id="delete-form" method="post" action="{% url 'users:user_delete' target_user.pk %}" style="display: none;">
+        {% csrf_token %}
+    </form>
+    {% endif %}
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const roleSelect = document.getElementById('{{ form.role.id_for_label }}');
+        const staffFields = document.getElementById('lecturer-fields');
+        const studentFields = document.getElementById('student-fields');
+        const coordinatorIdField = document.getElementById('coordinator-id-field');
+
+        function toggleFields() {
+            const role = roleSelect.value;
+            staffFields.style.opacity = '0';
+            studentFields.style.opacity = '0';
+            
+            setTimeout(() => {
+                staffFields.style.display = (role === 'LECTURER') ? 'block' : 'none';
+                if (role === 'STUDENT' || role === 'COORDINATOR') {
+                    studentFields.style.display = 'block';
+                    coordinatorIdField.style.display = (role === 'COORDINATOR') ? 'block' : 'none';
+                } else {
+                    studentFields.style.display = 'none';
+                }
+                staffFields.style.opacity = '1';
+                studentFields.style.opacity = '1';
+            }, 50);
+        }
+
+        roleSelect.addEventListener('change', toggleFields);
+        toggleFields();
+        
+        // Add styles for transition
+        staffFields.style.transition = 'opacity 0.3s ease';
+        studentFields.style.transition = 'opacity 0.3s ease';
+    });
+</script>
+{% endblock %}

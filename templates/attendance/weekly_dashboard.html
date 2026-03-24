@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Weekly Attendance Monitoring{% endblock %}
+
+{% block content %}
+<style>
+    body {
+        background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url("{% static 'images/dsh.jpg' %}");
+        background-size: cover;
+        background-attachment: fixed;
+        background-position: center;
+    }
+    .dashboard-main-card {
+        background: var(--glass-bg, rgba(255, 255, 255, 0.9)) !important;
+        backdrop-filter: blur(12px);
+    }
+</style>
+<div class="card dashboard-main-card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <h1 style="color: var(--primary); margin: 0;">Weekly Monitoring Dashboard</h1>
+        <div style="display: flex; gap: 1rem;">
+            <a href="{% url 'attendance:session_list' %}" class="btn" style="background-color: var(--card-bg); border: 1px solid var(--border);">Individual Sessions</a>
+            <a href="{% url 'users:home' %}" class="btn" style="background-color: var(--card-bg); border: 1px solid var(--border);">Back to Home</a>
+        </div>
+    </div>
+
+    {% if messages %}
+    {% for message in messages %}
+    <div style="padding: 1rem; margin-bottom: 1.5rem; border-radius: 0.5rem; background: rgba(34, 197, 94, 0.1); border: 1px solid #22c55e; color: #86efac;">
+        {{ message }}
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <div class="grid" style="grid-template-columns: 1fr; gap: 2rem;">
+        {% for summary in weekly_summary %}
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 1rem; padding: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 1rem;">
+                <div>
+                    <h3 style="margin: 0; color: var(--primary);">Week of {{ summary.week|date:"M d, Y" }}</h3>
+                    <p style="margin: 0.25rem 0 0; color: var(--text-muted);">
+                        <strong>{{ summary.timetable_entry__course_unit__code }}</strong>: {{ summary.timetable_entry__course_unit__name }}
+                    </p>
+                </div>
+                <div style="text-align: right;">
+                    <span style="display: block; font-size: 0.8rem; color: var(--text-muted);">Sessions This Week</span>
+                    <span style="font-size: 1.2rem; font-weight: bold;">{{ summary.total_sessions }}</span>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                <div style="background: rgba(99, 102, 241, 0.1); padding: 0.75rem; border-radius: 0.5rem; text-align: center;">
+                    <small style="display: block; color: #818cf8; margin-bottom: 0.25rem;">Conducted</small>
+                    <span style="font-weight: bold;">{{ summary.conducted_count }}</span>
+                </div>
+                <div style="background: rgba(251, 191, 36, 0.1); padding: 0.75rem; border-radius: 0.5rem; text-align: center;">
+                    <small style="display: block; color: #fbbf24; margin-bottom: 0.25rem;">Submitted</small>
+                    <span style="font-weight: bold;">{{ summary.submitted_count }}</span>
+                </div>
+                <div style="background: rgba(34, 197, 94, 0.1); padding: 0.75rem; border-radius: 0.5rem; text-align: center;">
+                    <small style="display: block; color: #4ade80; margin-bottom: 0.25rem;">Approved</small>
+                    <span style="font-weight: bold;">{{ summary.approved_count }}</span>
+                </div>
+                {% if summary.missed_count > 0 %}
+                <div style="background: rgba(239, 68, 68, 0.1); padding: 0.75rem; border-radius: 0.5rem; text-align: center;">
+                    <small style="display: block; color: #f87171; margin-bottom: 0.25rem;">Missed</small>
+                    <span style="font-weight: bold;">{{ summary.missed_count }}</span>
+                </div>
+                {% endif %}
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 1rem; align-items: center;">
+                <a href="{% url 'attendance:week_detail' summary.week|date:'Y-m-d' summary.timetable_entry__course_unit__id %}" class="btn" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border);">
+                    View Details & Verify
+                </a>
+
+                {% if user.role == 'LECTURER' and summary.submitted_count > 0 %}
+                <form action="{% url 'attendance:review_week' summary.week|date:'Y-m-d' summary.timetable_entry__course_unit__id %}" method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="btn" style="background-color: var(--primary); color: #fff;">
+                        Review & Approve Week
+                    </button>
+                </form>
+                {% endif %}
+
+                {% if user.role == 'COORDINATOR' and summary.conducted_count > 0 %}
+                <span style="color: var(--text-muted); font-size: 0.9rem;">Wait for Teaching Staff review of submitted sessions.</span>
+                {% elif user.role == 'COORDINATOR' and summary.total_sessions > summary.conducted_count %}
+                <a href="{% url 'attendance:session_list' %}" class="btn" style="font-size: 0.9rem;">
+                    Record Sessions
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% empty %}
+        <div style="padding: 3rem; text-align: center; color: var(--text-muted);">
+            No attendance data found for the current academic period.
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<style>
+    .grid { display: grid; }
+    .btn { cursor: pointer; transition: all 0.2s; }
+    .btn:hover { transform: translateY(-1px); filter: brightness(1.1); }
+</style>
+{% endblock %}

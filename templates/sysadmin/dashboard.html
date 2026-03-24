@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}System Administration{% endblock %}
+
+{% block content %}
+<style>
+    body {
+        background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url("{% static 'images/dsh.jpg' %}");
+        background-size: cover;
+        background-attachment: fixed;
+        background-position: center;
+    }
+    .dashboard-main-card {
+        background: var(--glass-bg, rgba(255, 255, 255, 0.9)) !important;
+        backdrop-filter: blur(12px);
+    }
+</style>
+<div class="card dashboard-main-card">
+    <h1 style="color: var(--primary); margin-top: 0;">System Administration</h1>
+    <p style="color: var(--text-muted); font-size: 1.1rem; margin-bottom: 2rem;">
+        Global Platform Management Console
+    </p>
+
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 2rem;">
+        <div
+            style="background: rgba(99, 102, 241, 0.1); padding: 1.5rem; border-radius: 0.5rem; border: 1px solid var(--primary);">
+            <h3 style="margin: 0; color: var(--primary);">{{ total_users }}</h3>
+            <p style="margin: 0; color: var(--text-muted);">Total Users</p>
+        </div>
+        <div
+            style="background: rgba(99, 102, 241, 0.1); padding: 1.5rem; border-radius: 0.5rem; border: 1px solid var(--primary);">
+            <h3 style="margin: 0; color: var(--primary);">{{ total_depts }}</h3>
+            <p style="margin: 0; color: var(--text-muted);">Departments</p>
+        </div>
+        <div
+            style="background: rgba(99, 102, 241, 0.1); padding: 1.5rem; border-radius: 0.5rem; border: 1px solid var(--primary);">
+            <h3 style="margin: 0; color: var(--primary);">Active</h3>
+            <p style="margin: 0; color: var(--text-muted);">System Status</p>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div style="margin-bottom: 2rem;">
+        <h3>Technical Administration</h3>
+        <div style="display: flex; gap: 1rem;">
+            <a href="{% url 'sysadmin:user_management' %}" class="btn">User Management</a>
+            <a href="/admin/sysadmin/globalsettings/" class="btn">System Settings</a>
+            <a href="/admin/sysadmin/auditlog/" class="btn"
+                style="background-color: var(--card-bg); border: 1px solid var(--border);">All Audit Logs</a>
+        </div>
+    </div>
+
+    <!-- Audit Log Toggle -->
+    <div style="margin-top: 1rem;">
+        <button
+            onclick="document.getElementById('audit-logs').style.display = document.getElementById('audit-logs').style.display === 'none' ? 'block' : 'none'; this.querySelector('.toggle-arrow').textContent = document.getElementById('audit-logs').style.display === 'none' ? '▶' : '▼';"
+            class="btn"
+            style="background-color: var(--primary); color: #fff; display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+            <span class="toggle-arrow">▶</span> Recent Logs
+        </button>
+    </div>
+
+    <div id="audit-logs" style="display: none; margin-top: 1rem;">
+        <h3>Recent Audit Logs</h3>
+        <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
+            <thead>
+                <tr style="text-align: left; border-bottom: 1px solid var(--border);">
+                    <th style="padding: 1rem 0;">Timestamp</th>
+                    <th style="padding: 1rem 0;">Actor</th>
+                    <th style="padding: 1rem 0;">Action</th>
+                    <th style="padding: 1rem 0;">Target</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in recent_audit_logs %}
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                    <td style="padding: 1rem 0;">{{ log.timestamp|date:"Y-m-d H:i" }}</td>
+                    <td style="padding: 1rem 0;">{{ log.actor.username|default:"System" }}</td>
+                    <td style="padding: 1rem 0;">{{ log.action }}</td>
+                    <td style="padding: 1rem 0;">{{ log.target|default:"-" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" style="padding: 1rem 0; text-align: center; color: var(--text-muted);">No logs
+                        found.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

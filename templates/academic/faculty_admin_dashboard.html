@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Faculty Administration{% endblock %}
+
+{% block content %}
+<style>
+    body {
+        background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url("{% static 'images/dsh.jpg' %}");
+        background-size: cover;
+        background-attachment: fixed;
+        background-position: center;
+    }
+    .dashboard-main-card {
+        background: var(--glass-bg, rgba(255, 255, 255, 0.9)) !important;
+        backdrop-filter: blur(12px);
+    }
+</style>
+<div class="card dashboard-main-card">
+    <h1 style="color: var(--primary); margin-top: 0;">Faculty Administration</h1>
+    <p style="color: var(--text-muted); font-size: 1.1rem; margin-bottom: 2rem;">
+        Academic Structure Management Console
+    </p>
+
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 2rem;">
+        <div
+            style="background: rgba(99, 102, 241, 0.1); padding: 1.5rem; border-radius: 0.5rem; border: 1px solid var(--primary);">
+            <h3 style="margin: 0; color: var(--primary);">{{ total_faculties }}</h3>
+            <p style="margin: 0; color: var(--text-muted);">Total Faculties</p>
+        </div>
+        <div
+            style="background: rgba(99, 102, 241, 0.1); padding: 1.5rem; border-radius: 0.5rem; border: 1px solid var(--primary);">
+            <h3 style="margin: 0; color: var(--primary);">{{ total_departments }}</h3>
+            <p style="margin: 0; color: var(--text-muted);">Departments</p>
+        </div>
+        <div
+            style="background: rgba(99, 102, 241, 0.1); padding: 1.5rem; border-radius: 0.5rem; border: 1px solid var(--primary);">
+            <h3 style="margin: 0; color: var(--primary);">{{ total_programs }}</h3>
+            <p style="margin: 0; color: var(--text-muted);">Academic Programs</p>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div style="margin-bottom: 2rem;">
+        <h3>Academic Governance</h3>
+        <div style="display: flex; gap: 1rem;">
+            <a href="{% url 'academic:faculty_management' %}" class="btn">Manage Faculties</a>
+            <a href="{% url 'academic:department_management' %}" class="btn">Manage Departments</a>
+            <a href="{% url 'academic:program_management' %}" class="btn">Manage Programs</a>
+        </div>
+    </div>
+
+    <div
+        style="background: rgba(255, 255, 255, 0.03); padding: 1.5rem; border-radius: 0.5rem; border: 1px solid var(--border);">
+        <h3 style="margin-top: 0;">Scope & Responsibilities</h3>
+        <ul style="color: var(--text-muted); line-height: 1.6;">
+            <li>Manage academic structures across departments.</li>
+            <li>Configure faculty-level academic calendars.</li>
+            <li>Assign and oversee Heads of Department.</li>
+            <li>View aggregated faculty-level reports.</li>
+        </ul>
+        <p style="color: var(--primary); font-size: 0.9rem; margin-top: 1rem;">
+            <i class="fas fa-info-circle"></i> Restrictions: You cannot modify departmental timetables or edit
+            attendance records.
+        </p>
+    </div>
+</div>
+{% endblock %}

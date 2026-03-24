@@ -1,0 +1,192 @@
+DEPARTMENTAL SCHEDULING AND ATTENDANCE MANAGEMENT SYSTEM (DSAMS)
+1. INTRODUCTION
+1.1 Purpose
+This document specifies the functional and non-functional requirements for the Departmental Scheduling and Attendance Management System (DSAMS). The system is designed to support Heads of Department (HODs), Class Coordinators, and Lecturers in managing timetables, monitoring lecture delivery, recording student attendance, generating analytics, and improving academic operations at departmental level.
+1.2 Scope
+DSAMS will operate within a single academic department and will provide:
+Timetable creation and updates
+Lecture session tracking
+Attendance recording and verification
+Automated analytics and alerts
+Reporting dashboards
+Role-based access control
+1.3 Users
+System Administrator
+Head of Department (HOD)
+Class Coordinator
+Lecturer
+Student (view-only)
+2. SYSTEM OBJECTIVES
+Automate departmental timetabling
+Improve attendance accuracy
+Enable real-time monitoring
+Provide actionable analytics
+Reduce administrative workload
+Improve communication
+3. FUNCTIONAL REQUIREMENTS
+3.1 User Management
+Create, update, deactivate user accounts
+Assign roles and permissions
+Department-scoped access
+3.2 Timetable Management (HOD)
+Create semester timetables
+Assign course
+_units
+, lecturers, venues, time slots
+Detect scheduling conflicts
+Upload timetable files (optional)
+Approve reschedules
+3.3 Lecture Session Tracking
+Auto-generate sessions from timetable
+Lecturer confirms delivery status
+Record missed or rescheduled lectures
+3.4 Attendance Recording (Lecturer)
+View daily teaching schedule
+Load class list automatically
+Mark present/absent
+Submit attendance per session
+3.5 Attendance Verification (Coordinator)
+Review submitted attendance
+Flag inconsistencies
+Approve finalized records
+3.6 Notifications
+Timetable changes
+Missing attendance reminders
+Low attendance alerts
+Announcements
+3.7 Reporting & Dashboards
+Operational Reports
+Daily attendance
+Missing submissions
+Lecture status
+Performance Reports
+Attendance percentages
+Lecture compliance
+Student risk lists
+Trend Analytics
+Time-slot performance
+Course engagement
+Absence patterns
+4. ATTENDANCE ANALYTICS
+4.1 Core Metrics
+Student attendance percentage
+Class attendance average
+Course-level attendance
+Lecture delivery compliance
+4.2 Risk Detection
+Low attendance threshold
+Consecutive absences
+Sudden drops
+4.3 Pattern Analysis
+Day/time-slot trends
+Course-level issues
+Engagement shifts
+5. RULE-BASED MONITORING (LAYER 1)
+Attendance below policy limit
+Unsubmitted attendance
+Missed lectures
+Scheduling clashes
+Low class turnout
+Excessive reschedules
+Duplicate records
+Unauthorized modifications
+6. USER ROLES & PERMISSIONS
+System Administrator
+Full system access
+Faculty-level 
+User management
+Maintenance
+HOD
+Timetable creation
+Lecture monitoring
+Full departmental reports
+Notifications
+Class Coordinator
+Attendance verification
+Class-level monitoring
+Communication
+Lecturer
+View schedule
+Submit attendance
+Confirm sessions
+Student
+View timetable
+View personal attendance
+7. ACADEMIC STRUCTURE 
+AND
+ DATA ENTITIES
+7.1 Academic Structure Clarification
+Department
+: Main academic unit (e.g., Department of Computing and Technology)
+Course (Program)
+: A specific academic program under one department (e.g., BSIT, DIT)
+Each course belongs to only one department
+Course Unit (Subject/Module)
+: A teaching unit offered within courses (e.g., Database Systems, Networking Fundamentals)
+A course unit may be shared across multiple courses
+A course unit may also be shared across different departments
+This structure enables flexible curriculum design while maintaining departmental ownership of academic programs.
+7.2 Core Data Entities
+User
+Role
+Department
+Course (Program)
+CourseUnit
+CourseUnitAssignment (links course units to courses & departments)
+ClassGroup
+Student
+Lecturer
+Timetable
+LectureSession
+AttendanceRecord
+Notification
+AuditLog
+8. SYSTEM ARCHITECTURE
+Frontend
+HTML, CSS, JavaScript
+Responsive dashboards
+Backend
+Django framework
+Python
+Database
+MySQL (primary)
+Services
+Notification engine
+Analytics processor
+Scheduled background jobs
+9. Non-Functional Requirements
+Performance
+Attendance submission < 2 seconds
+Report loading < 5 seconds
+Security
+Role-based access control
+Encrypted passwords
+Audit logging
+Reliability
+Daily backups
+Error handling
+Usability
+Simple dashboards
+Minimal data entry
+Mobile-friendly
+Scalability
+Support multiple classes
+Support growing student records
+10. CONSTRAINTS
+Department-level deployment
+Internet optional (local network supported)
+Limited hardware resources
+11. FUTURE ENHANCEMENTS
+Faculty-wide deployment
+Mobile app
+Biometric attendance
+AI-based predictions
+Integration with student portals
+12. SUCCESS CRITERIA
+Accurate attendance records
+Reduced missed lectures
+Improved engagement
+Positive user adoption
+Clear management insights
+13. CONCLUSION
+DSAMS aims to modernize departmental academic operations through automation, analytics, and structured workflows. The system focuses on usability, accountability, and real-world academic needs while remaining scalable for future institutional expansion.
