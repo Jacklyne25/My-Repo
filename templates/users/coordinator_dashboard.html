@@ -114,33 +114,137 @@
             </div>
 
             <!-- Notifications -->
-            <div class="card">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                    <h2 style="margin: 0; font-size: 1.25rem; color: var(--primary);">Class Notifications</h2>
+            <div class="coord-notif-panel">
+                <div class="coord-notif-header">
+                    <h2 class="coord-notif-title">🔔 Class Notifications</h2>
                     <div style="display: flex; gap: 0.5rem; align-items: center;">
                         {% if alerts.count > 0 %}
                         <form action="{% url 'core:mark_all_read' %}" method="post" style="display: inline;">
                             {% csrf_token %}
                             <input type="hidden" name="next" value="{{ request.path }}">
-                            <button type="submit" class="btn btn-sm" style="padding: 0.2rem 0.5rem; font-size: 0.8rem; background: rgba(220, 38, 38, 0.1); color: #ef4444; border: 1px solid rgba(220, 38, 38, 0.2); cursor: pointer;">
-                                🗑️ Clear
-                            </button>
+                            <button type="submit" class="coord-btn-clear">🗑️ Clear</button>
                         </form>
                         {% endif %}
-                        <a href="{% url 'core:create_announcement' %}" class="btn btn-sm btn-outline-primary" style="padding: 0.2rem 0.5rem; font-size: 0.8rem;">📢 Send</a>
+                        <a href="{% url 'core:create_announcement' %}" class="coord-btn-send">📢 Send</a>
                     </div>
                 </div>
-                <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                <div style="display: flex; flex-direction: column; gap: 0.6rem;">
                     {% for alert in alerts %}
-                    <div style="padding: 0.75rem; border-radius: 0.5rem; background: rgba(255,255,255,0.02); border: 1px solid var(--border); font-size: 0.9rem;">
-                        {{ alert.message }}
-                        <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">{{ alert.created_at|timesince }} ago</div>
+                    <div class="coord-notif-item
+                        {% if alert.severity == 'CRITICAL' %}coord-notif-critical
+                        {% elif alert.severity == 'WARNING' %}coord-notif-warning
+                        {% else %}coord-notif-info{% endif %}">
+                        <div class="coord-notif-stripe"></div>
+                        <div class="coord-notif-content">
+                            <div class="coord-notif-msg">{{ alert.message }}</div>
+                            <div class="coord-notif-meta">
+                                <span class="coord-notif-cat">{{ alert.get_category_display }}</span>
+                                <span>{{ alert.created_at|timesince }} ago</span>
+                            </div>
+                        </div>
                     </div>
                     {% empty %}
-                    <p style="color: var(--text-muted); font-size: 0.9rem;">No new notifications for your class.</p>
+                    <div class="coord-notif-empty">
+                        <span style="font-size: 1.5rem;">🎉</span>
+                        <span>No new notifications.</span>
+                    </div>
                     {% endfor %}
                 </div>
             </div>
+
+            <style>
+                .coord-notif-panel {
+                    background: rgba(255, 255, 255, 0.92);
+                    border: 1px solid rgba(255, 255, 255, 0.6);
+                    border-radius: 1.25rem;
+                    padding: 1.5rem;
+                    box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+                    backdrop-filter: blur(16px);
+                }
+                .coord-notif-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-bottom: 1.25rem;
+                }
+                .coord-notif-title {
+                    margin: 0;
+                    font-size: 1.1rem;
+                    font-weight: 800;
+                    color: #1e293b;
+                }
+                .coord-btn-clear {
+                    padding: 0.25rem 0.65rem;
+                    font-size: 0.78rem;
+                    font-weight: 700;
+                    background: rgba(220, 38, 38, 0.08);
+                    color: #ef4444;
+                    border: 1px solid rgba(220, 38, 38, 0.25);
+                    border-radius: 0.5rem;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                }
+                .coord-btn-send {
+                    padding: 0.25rem 0.65rem;
+                    font-size: 0.78rem;
+                    font-weight: 700;
+                    background: rgba(37, 99, 235, 0.08);
+                    color: #2563eb;
+                    border: 1px solid rgba(37, 99, 235, 0.25);
+                    border-radius: 0.5rem;
+                    text-decoration: none;
+                    transition: all 0.2s;
+                }
+                .coord-btn-clear:hover, .coord-btn-send:hover { opacity: 0.8; }
+                .coord-notif-item {
+                    display: flex;
+                    border-radius: 0.75rem;
+                    overflow: hidden;
+                    border: 1px solid #e2e8f0;
+                    background: #ffffff;
+                    transition: transform 0.15s, box-shadow 0.15s;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+                }
+                .coord-notif-item:hover {
+                    transform: translateX(3px);
+                    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+                }
+                .coord-notif-critical .coord-notif-stripe { background: #ef4444; }
+                .coord-notif-warning  .coord-notif-stripe { background: #f59e0b; }
+                .coord-notif-info     .coord-notif-stripe { background: #3b82f6; }
+                .coord-notif-stripe { width: 5px; flex-shrink: 0; }
+                .coord-notif-content { flex: 1; padding: 0.75rem 1rem; }
+                .coord-notif-msg {
+                    font-size: 0.875rem;
+                    color: #1e293b;
+                    line-height: 1.5;
+                    margin-bottom: 0.35rem;
+                }
+                .coord-notif-meta {
+                    display: flex;
+                    gap: 0.75rem;
+                    font-size: 0.72rem;
+                    color: #94a3b8;
+                    font-weight: 500;
+                }
+                .coord-notif-cat {
+                    background: #f1f5f9;
+                    color: #475569;
+                    padding: 0.1rem 0.5rem;
+                    border-radius: 0.4rem;
+                    font-weight: 700;
+                }
+                .coord-notif-empty {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.75rem;
+                    padding: 1.5rem;
+                    color: #94a3b8;
+                    font-size: 0.9rem;
+                    justify-content: center;
+                    font-style: italic;
+                }
+            </style>
         </div>
 
         <!-- Right Column: Timetable Grid -->

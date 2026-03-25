@@ -1,343 +1,768 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Bulk Data Import{% endblock %}
 
 {% block content %}
-<style>
-    .accordion-group {
-        border: 1px solid var(--border);
-        border-radius: 0.75rem;
-        margin-bottom: 1.25rem;
-        overflow: hidden;
-    }
+<!-- ===== ANIMATED BACKGROUND GRAPHICS ===== -->
+<div class="bdi-bg">
+    <div class="bdi-orb bdi-orb-1"></div>
+    <div class="bdi-orb bdi-orb-2"></div>
+    <div class="bdi-orb bdi-orb-3"></div>
+    <div class="bdi-grid"></div>
+</div>
 
-    .accordion-toggle {
-        width: 100%;
-        background: rgba(255, 255, 255, 0.06);
-        border: none;
-        padding: 1rem 1.25rem;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        cursor: pointer;
-        color: var(--text);
-        font-size: 1rem;
-        font-weight: 600;
-        transition: background 0.2s;
-        text-align: left;
-    }
+<div class="bdi-page">
+    <!-- ===== PAGE HEADER ===== -->
+    <div class="bdi-header-card">
+        <div class="bdi-header-left">
+            <div class="bdi-header-icon">📥</div>
+            <div>
+                <h1 class="bdi-title">Bulk Data Import</h1>
+                <p class="bdi-subtitle">
+                    Upload CSV or Excel files grouped by category to populate the system database.
+                </p>
+            </div>
+        </div>
+        <a href="{% url 'users:hod_dashboard' %}" class="bdi-back-btn">
+            ← Back to Dashboard
+        </a>
+    </div>
 
-    .accordion-toggle:hover {
-        background: rgba(255, 255, 255, 0.1);
-    }
-
-    .accordion-toggle .group-label {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-    }
-
-    .accordion-toggle .badge {
-        font-size: 0.7rem;
-        background: var(--primary);
-        color: white;
-        padding: 0.15rem 0.55rem;
-        border-radius: 999px;
-        font-weight: 500;
-    }
-
-    .accordion-toggle .chevron {
-        transition: transform 0.25s ease;
-        font-size: 1.1rem;
-        color: var(--text-muted);
-    }
-
-    .accordion-toggle.open .chevron {
-        transform: rotate(180deg);
-    }
-
-    .accordion-body {
-        display: none;
-        padding: 1.25rem;
-        border-top: 1px solid var(--border);
-        background: rgba(0, 0, 0, 0.1);
-        flex-direction: column;
-        gap: 1.5rem;
-    }
-
-    .accordion-body.open {
-        display: flex;
-    }
-
-    .import-section {
-        background: rgba(255, 255, 255, 0.03);
-        border: 1px solid var(--border);
-        border-radius: 0.5rem;
-        padding: 1.25rem;
-    }
-
-    .import-section-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 1rem;
-        padding-bottom: 0.6rem;
-        border-bottom: 1px solid var(--border);
-    }
-
-    .import-section-header h4 {
-        margin: 0;
-        font-size: 0.95rem;
-        font-weight: 600;
-        color: var(--text);
-    }
-
-    .import-section-header a {
-        font-size: 0.8rem;
-        color: var(--primary);
-        text-decoration: none;
-        font-weight: 500;
-        opacity: 0.85;
-        transition: opacity 0.2s;
-    }
-
-    .import-section-header a:hover {
-        opacity: 1;
-        text-decoration: underline;
-    }
-
-    .file-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 0.5rem;
-    }
-
-    .file-row label {
-        font-size: 0.85rem;
-        color: var(--text-muted);
-    }
-
-    .file-row a {
-        font-size: 0.8rem;
-        color: var(--primary);
-        text-decoration: none;
-    }
-
-    .file-row a:hover {
-        text-decoration: underline;
-    }
-
-    .file-input {
-        width: 100%;
-        padding: 0.45rem;
-        border: 1px solid var(--border);
-        border-radius: 4px;
-        background: var(--bg-dark);
-        color: var(--text);
-        margin-bottom: 0.85rem;
-    }
-
-    body {
-        background: linear-gradient(135deg, #70a1ff 0%, #778ca3 100%);
-        background-attachment: fixed;
-        background-position: center;
-        font-family: 'Inter', sans-serif;
-    }
-</style>
-
-<div class="card" style="max-width: 860px; margin: 0 auto;">
-    <h1 style="color: var(--primary);">Bulk Data Import</h1>
-    <p style="color: var(--text-muted);">Upload CSV files grouped by category. Click a section to expand it.</p>
-
-    <div style="margin-top: 2rem;">
+    <!-- ===== IMPORT GROUPS ===== -->
+    <div class="bdi-groups-container">
 
         <!-- ── Users Group ─────────────────────────────────────── -->
-        <div class="accordion-group">
-            <button class="accordion-toggle open" onclick="toggleAccordion(this)" id="toggle-users" aria-expanded="true"
-                aria-controls="body-users">
-                <span class="group-label">
-                    👥 &nbsp;Users
-                    <span class="badge">Teaching Staff · Students · Coordinators</span>
-                </span>
-                <span class="chevron">▾</span>
+        <div class="bdi-accordion-group">
+            <button class="bdi-accordion-toggle open" onclick="toggleAccordion(this)" id="toggle-users" aria-expanded="true" aria-controls="body-users">
+                <div class="bdi-group-label">
+                    <div class="bdi-group-icon">👥</div>
+                    <div class="bdi-group-text">
+                        <span class="bdi-group-title">Users</span>
+                        <div class="bdi-badges">
+                            <span class="bdi-badge bdi-badge-blue">Teaching Staff</span>
+                            <span class="bdi-badge bdi-badge-green">Students</span>
+                            <span class="bdi-badge bdi-badge-purple">Coordinators</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="bdi-chevron">▼</div>
             </button>
 
-            <div class="accordion-body open" id="body-users">
-
-                <!-- Students -->
-                <div class="import-section">
-                    <div class="import-section-header">
-                        <h4>Import Students</h4>
-                        <a href="{% url 'users:user_list' %}">View Uploaded Students →</a>
-                    </div>
-                    <form method="post" enctype="multipart/form-data">
-                        {% csrf_token %}
-                        <input type="hidden" name="import_type" value="students">
-                        <div class="file-row">
-                            <label>Select Excel or CSV File</label>
-                            <a href="{% url 'academic:download_template' 'students' %}">Download Template (.xlsx)</a>
+            <div class="bdi-accordion-body open" id="body-users">
+                <div class="bdi-cards-grid">
+                    
+                    <!-- Students -->
+                    <div class="bdi-import-card">
+                        <div class="bdi-card-header">
+                            <div>
+                                <h4>Import Students</h4>
+                                <p>Upload student enrollment data.</p>
+                            </div>
+                            <div class="bdi-card-icon">🎓</div>
                         </div>
-                        <input type="file" name="file" accept=".csv,.xlsx,.xls" required class="file-input">
-                        <button type="submit" class="btn">Upload Students</button>
-                    </form>
-                </div>
-
-                <!-- Teaching Staff -->
-                <div class="import-section">
-                    <div class="import-section-header">
-                        <h4>Import Teaching Staff</h4>
-                        <a href="{% url 'users:user_list' %}">View Teaching Staff List →</a>
-                    </div>
-                    <form method="post" enctype="multipart/form-data">
-                        {% csrf_token %}
-                        <input type="hidden" name="import_type" value="lecturers">
-                        <div class="file-row">
-                            <label>Select Excel or CSV File</label>
-                            <a href="{% url 'academic:download_template' 'lecturers' %}">Download Template (.xlsx)</a>
+                        <div class="bdi-card-actions">
+                            <a href="{% url 'academic:download_template' 'students' %}" class="bdi-template-link">📄 Download Template</a>
+                            <a href="{% url 'users:user_list' %}" class="bdi-view-link">View List →</a>
                         </div>
-                        <input type="file" name="file" accept=".csv,.xlsx,.xls" required class="file-input">
-                        <button type="submit" class="btn">Import Teaching Staff</button>
-                    </form>
-                </div>
-
-                <!-- Coordinators -->
-                <div class="import-section">
-                    <div class="import-section-header">
-                        <h4>Import Class Coordinators</h4>
-                        <a href="{% url 'users:user_list' %}">View Uploaded Coordinators →</a>
+                        <form method="post" enctype="multipart/form-data" class="bdi-upload-form">
+                            {% csrf_token %}
+                            <input type="hidden" name="import_type" value="students">
+                            <div class="bdi-file-input-wrapper">
+                                <input type="file" name="file" accept=".csv,.xlsx,.xls" required class="bdi-file-input">
+                            </div>
+                            <button type="submit" class="bdi-btn bdi-btn-primary">
+                                <span>Upload Students</span>
+                                <span class="bdi-btn-icon">↑</span>
+                            </button>
+                        </form>
                     </div>
-                    <form method="post" enctype="multipart/form-data">
-                        {% csrf_token %}
-                        <input type="hidden" name="import_type" value="coordinators">
-                        <div class="file-row">
-                            <label>Select Excel or CSV File</label>
-                            <a href="{% url 'academic:download_template' 'coordinators' %}">Download Template
-                                (.xlsx)</a>
-                        </div>
-                        <input type="file" name="file" accept=".csv,.xlsx,.xls" required class="file-input">
-                        <button type="submit" class="btn">Upload Coordinators</button>
-                    </form>
-                </div>
 
+                    <!-- Teaching Staff -->
+                    <div class="bdi-import-card">
+                        <div class="bdi-card-header">
+                            <div>
+                                <h4>Import Teaching Staff</h4>
+                                <p>Upload lecturer and faculty data.</p>
+                            </div>
+                            <div class="bdi-card-icon">👨‍🏫</div>
+                        </div>
+                        <div class="bdi-card-actions">
+                            <a href="{% url 'academic:download_template' 'lecturers' %}" class="bdi-template-link">📄 Download Template</a>
+                            <a href="{% url 'users:user_list' %}" class="bdi-view-link">View List →</a>
+                        </div>
+                        <form method="post" enctype="multipart/form-data" class="bdi-upload-form">
+                            {% csrf_token %}
+                            <input type="hidden" name="import_type" value="lecturers">
+                            <div class="bdi-file-input-wrapper">
+                                <input type="file" name="file" accept=".csv,.xlsx,.xls" required class="bdi-file-input">
+                            </div>
+                            <button type="submit" class="bdi-btn bdi-btn-primary">
+                                <span>Upload Staff</span>
+                                <span class="bdi-btn-icon">↑</span>
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Coordinators -->
+                    <div class="bdi-import-card">
+                        <div class="bdi-card-header">
+                            <div>
+                                <h4>Import Coordinators</h4>
+                                <p>Upload class coordinator data.</p>
+                            </div>
+                            <div class="bdi-card-icon">👨‍💼</div>
+                        </div>
+                        <div class="bdi-card-actions">
+                            <a href="{% url 'academic:download_template' 'coordinators' %}" class="bdi-template-link">📄 Download Template</a>
+                            <a href="{% url 'users:user_list' %}" class="bdi-view-link">View List →</a>
+                        </div>
+                        <form method="post" enctype="multipart/form-data" class="bdi-upload-form">
+                            {% csrf_token %}
+                            <input type="hidden" name="import_type" value="coordinators">
+                            <div class="bdi-file-input-wrapper">
+                                <input type="file" name="file" accept=".csv,.xlsx,.xls" required class="bdi-file-input">
+                            </div>
+                            <button type="submit" class="bdi-btn bdi-btn-primary">
+                                <span>Upload Coordinators</span>
+                                <span class="bdi-btn-icon">↑</span>
+                            </button>
+                        </form>
+                    </div>
+
+                </div>
             </div>
         </div>
 
         <!-- ── Timetabling Group ───────────────────────────────── -->
-        <div class="accordion-group">
-            <button class="accordion-toggle" onclick="toggleAccordion(this)" id="toggle-timetabling"
-                aria-expanded="false" aria-controls="body-timetabling">
-                <span class="group-label">
-                    📅 &nbsp;Timetabling
-                    <span class="badge">Programs · Timetable · Course Units · Rooms · Groups</span>
-                </span>
-                <span class="chevron">▾</span>
+        <div class="bdi-accordion-group">
+            <button class="bdi-accordion-toggle" onclick="toggleAccordion(this)" id="toggle-timetabling" aria-expanded="false" aria-controls="body-timetabling">
+                <div class="bdi-group-label">
+                    <div class="bdi-group-icon">📅</div>
+                    <div class="bdi-group-text">
+                        <span class="bdi-group-title">Timetabling</span>
+                        <div class="bdi-badges">
+                            <span class="bdi-badge bdi-badge-gold">Programs</span>
+                            <span class="bdi-badge bdi-badge-gold">Timetable</span>
+                            <span class="bdi-badge bdi-badge-gold">Course Units</span>
+                            <span class="bdi-badge bdi-badge-gold">Rooms</span>
+                            <span class="bdi-badge bdi-badge-gold">Groups</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="bdi-chevron">▼</div>
             </button>
 
-            <div class="accordion-body" id="body-timetabling">
+            <div class="bdi-accordion-body" id="body-timetabling">
+                <div class="bdi-cards-grid">
  
-                <!-- Programs -->
-                <div class="import-section">
-                    <div class="import-section-header">
-                        <h4>Import Programs</h4>
-                        <a href="{% url 'academic:program_management' %}">View Uploaded Programs →</a>
-                    </div>
-                    <form method="post" enctype="multipart/form-data">
-                        {% csrf_token %}
-                        <input type="hidden" name="import_type" value="programs">
-                        <div class="file-row">
-                            <label>Select Excel or CSV File</label>
-                            <a href="{% url 'academic:download_template' 'programs' %}">Download Template (.xlsx)</a>
+                    <!-- Programs -->
+                    <div class="bdi-import-card">
+                        <div class="bdi-card-header">
+                            <div>
+                                <h4>Import Programs</h4>
+                                <p>Upload academic program structures.</p>
+                            </div>
+                            <div class="bdi-card-icon">📘</div>
                         </div>
-                        <input type="file" name="file" accept=".csv,.xlsx,.xls" required class="file-input">
-                        <button type="submit" class="btn">Upload Programs</button>
-                    </form>
-                </div>
+                        <div class="bdi-card-actions">
+                            <a href="{% url 'academic:download_template' 'programs' %}" class="bdi-template-link">📄 Download Template</a>
+                            <a href="{% url 'academic:program_management' %}" class="bdi-view-link">View List →</a>
+                        </div>
+                        <form method="post" enctype="multipart/form-data" class="bdi-upload-form">
+                            {% csrf_token %}
+                            <input type="hidden" name="import_type" value="programs">
+                            <div class="bdi-file-input-wrapper">
+                                <input type="file" name="file" accept=".csv,.xlsx,.xls" required class="bdi-file-input">
+                            </div>
+                            <button type="submit" class="bdi-btn bdi-btn-secondary">
+                                <span>Upload Programs</span>
+                                <span class="bdi-btn-icon">↑</span>
+                            </button>
+                        </form>
+                    </div>
  
-                <!-- Timetable -->
-                <div class="import-section">
-                    <div class="import-section-header">
-                        <h4>Import Timetable</h4>
-                        <a href="{% url 'academic:department_timetable' %}">View Uploaded Timetable →</a>
-                    </div>
-                    <form method="post" enctype="multipart/form-data">
-                        {% csrf_token %}
-                        <input type="hidden" name="import_type" value="timetable">
-                        <div class="file-row">
-                            <label>Select Excel or CSV File</label>
-                            <a href="{% url 'academic:download_template' 'timetable' %}">Download Template (.xlsx)</a>
+                    <!-- Timetable -->
+                    <div class="bdi-import-card">
+                        <div class="bdi-card-header">
+                            <div>
+                                <h4>Import Timetable</h4>
+                                <p>Upload pre-scheduled timetable data.</p>
+                            </div>
+                            <div class="bdi-card-icon">🗓️</div>
                         </div>
-                        <input type="file" name="file" accept=".csv,.xlsx,.xls" required class="file-input">
-                        <button type="submit" class="btn">Upload Timetable</button>
-                    </form>
-                </div>
-
-                <!-- Course Units -->
-                <div class="import-section">
-                    <div class="import-section-header">
-                        <h4>Import Course Units</h4>
-                        <a href="{% url 'academic:hod_course_list' %}">View Uploaded Course Units →</a>
-                    </div>
-                    <form method="post" enctype="multipart/form-data">
-                        {% csrf_token %}
-                        <input type="hidden" name="import_type" value="course_units">
-                        <div class="file-row">
-                            <label>Select Excel or CSV File</label>
-                            <a href="{% url 'academic:download_template' 'course_units' %}">Download Template
-                                (.xlsx)</a>
+                        <div class="bdi-card-actions">
+                            <a href="{% url 'academic:download_template' 'timetable' %}" class="bdi-template-link">📄 Download Template</a>
+                            <a href="{% url 'academic:department_timetable' %}" class="bdi-view-link">View List →</a>
                         </div>
-                        <input type="file" name="file" accept=".csv,.xlsx,.xls" required class="file-input">
-                        <button type="submit" class="btn">Upload Course Units</button>
-                    </form>
-                </div>
-
-                <!-- Rooms -->
-                <div class="import-section">
-                    <div class="import-section-header">
-                        <h4>Import Rooms</h4>
-                        <a href="{% url 'scheduling:room_list' %}">View Uploaded Rooms →</a>
+                        <form method="post" enctype="multipart/form-data" class="bdi-upload-form">
+                            {% csrf_token %}
+                            <input type="hidden" name="import_type" value="timetable">
+                            <div class="bdi-file-input-wrapper">
+                                <input type="file" name="file" accept=".csv,.xlsx,.xls" required class="bdi-file-input">
+                            </div>
+                            <button type="submit" class="bdi-btn bdi-btn-secondary">
+                                <span>Upload Timetable</span>
+                                <span class="bdi-btn-icon">↑</span>
+                            </button>
+                        </form>
                     </div>
-                    <form method="post" enctype="multipart/form-data">
-                        {% csrf_token %}
-                        <input type="hidden" name="import_type" value="rooms">
-                        <div class="file-row">
-                            <label>Select Excel or CSV File</label>
-                            <a href="{% url 'academic:download_template' 'rooms' %}">Download Template (.xlsx)</a>
-                        </div>
-                        <input type="file" name="file" accept=".csv,.xlsx,.xls" required class="file-input">
-                        <button type="submit" class="btn">Upload Rooms</button>
-                    </form>
-                </div>
 
-                <!-- Course Groups -->
-                <div class="import-section">
-                    <div class="import-section-header">
-                        <h4>Import Course Groups</h4>
-                        <a href="{% url 'academic:course_group_list' %}">View Uploaded Groups →</a>
+                    <!-- Course Units -->
+                    <div class="bdi-import-card">
+                        <div class="bdi-card-header">
+                            <div>
+                                <h4>Import Course Units</h4>
+                                <p>Upload master list of course units.</p>
+                            </div>
+                            <div class="bdi-card-icon">📚</div>
+                        </div>
+                        <div class="bdi-card-actions">
+                            <a href="{% url 'academic:download_template' 'course_units' %}" class="bdi-template-link">📄 Download Template</a>
+                            <a href="{% url 'academic:hod_course_list' %}" class="bdi-view-link">View List →</a>
+                        </div>
+                        <form method="post" enctype="multipart/form-data" class="bdi-upload-form">
+                            {% csrf_token %}
+                            <input type="hidden" name="import_type" value="course_units">
+                            <div class="bdi-file-input-wrapper">
+                                <input type="file" name="file" accept=".csv,.xlsx,.xls" required class="bdi-file-input">
+                            </div>
+                            <button type="submit" class="bdi-btn bdi-btn-secondary">
+                                <span>Upload Courses</span>
+                                <span class="bdi-btn-icon">↑</span>
+                            </button>
+                        </form>
                     </div>
-                    <form method="post" enctype="multipart/form-data">
-                        {% csrf_token %}
-                        <input type="hidden" name="import_type" value="course_groups">
-                        <div class="file-row">
-                            <label>Select Excel or CSV File</label>
-                            <a href="{% url 'academic:download_template' 'course_groups' %}">Download Template
-                                (.xlsx)</a>
-                        </div>
-                        <input type="file" name="file" accept=".csv,.xlsx,.xls" required class="file-input">
-                        <button type="submit" class="btn">Upload Course Groups</button>
-                    </form>
-                </div>
 
+                    <!-- Rooms -->
+                    <div class="bdi-import-card">
+                        <div class="bdi-card-header">
+                            <div>
+                                <h4>Import Rooms</h4>
+                                <p>Upload physical venue allocations.</p>
+                            </div>
+                            <div class="bdi-card-icon">🚪</div>
+                        </div>
+                        <div class="bdi-card-actions">
+                            <a href="{% url 'academic:download_template' 'rooms' %}" class="bdi-template-link">📄 Download Template</a>
+                            <a href="{% url 'scheduling:room_list' %}" class="bdi-view-link">View List →</a>
+                        </div>
+                        <form method="post" enctype="multipart/form-data" class="bdi-upload-form">
+                            {% csrf_token %}
+                            <input type="hidden" name="import_type" value="rooms">
+                            <div class="bdi-file-input-wrapper">
+                                <input type="file" name="file" accept=".csv,.xlsx,.xls" required class="bdi-file-input">
+                            </div>
+                            <button type="submit" class="bdi-btn bdi-btn-secondary">
+                                <span>Upload Rooms</span>
+                                <span class="bdi-btn-icon">↑</span>
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Course Groups -->
+                    <div class="bdi-import-card">
+                        <div class="bdi-card-header">
+                            <div>
+                                <h4>Import Course Groups</h4>
+                                <p>Upload student cohorts or study groups.</p>
+                            </div>
+                            <div class="bdi-card-icon">🏷️</div>
+                        </div>
+                        <div class="bdi-card-actions">
+                            <a href="{% url 'academic:download_template' 'course_groups' %}" class="bdi-template-link">📄 Download Template</a>
+                            <a href="{% url 'academic:course_group_list' %}" class="bdi-view-link">View List →</a>
+                        </div>
+                        <form method="post" enctype="multipart/form-data" class="bdi-upload-form">
+                            {% csrf_token %}
+                            <input type="hidden" name="import_type" value="course_groups">
+                            <div class="bdi-file-input-wrapper">
+                                <input type="file" name="file" accept=".csv,.xlsx,.xls" required class="bdi-file-input">
+                            </div>
+                            <button type="submit" class="bdi-btn bdi-btn-secondary">
+                                <span>Upload Groups</span>
+                                <span class="bdi-btn-icon">↑</span>
+                            </button>
+                        </form>
+                    </div>
+
+                </div>
             </div>
         </div>
 
     </div>
 
-    <div style="margin-top: 1.5rem;">
-        <a href="{% url 'users:hod_dashboard' %}" class="btn" style="background-color: var(--text-muted);">← Back to
-            Dashboard</a>
-    </div>
 </div>
+
+<style>
+    /* ===== BACKGROUND ===== */
+    body {
+        background: linear-gradient(135deg, #0a0f2c 0%, #151e45 40%, #203170 80%, #254190 100%);
+        background-attachment: fixed;
+        min-height: 100vh;
+        overflow-x: hidden;
+        margin: 0;
+        font-family: 'Inter', sans-serif;
+    }
+
+    .bdi-bg {
+        position: fixed;
+        inset: 0;
+        z-index: 0;
+        pointer-events: none;
+        overflow: hidden;
+    }
+
+    .bdi-orb {
+        position: absolute;
+        border-radius: 50%;
+        filter: blur(90px);
+        opacity: 0.25;
+    }
+
+    .bdi-orb-1 {
+        width: 600px; height: 600px;
+        background: radial-gradient(circle, #3b82f6, transparent 70%);
+        top: -200px; right: -150px;
+        animation: bdiFloat 12s ease-in-out infinite;
+    }
+
+    .bdi-orb-2 {
+        width: 500px; height: 500px;
+        background: radial-gradient(circle, #8b5cf6, transparent 70%);
+        bottom: -100px; left: -100px;
+        animation: bdiFloat 15s ease-in-out infinite reverse;
+    }
+
+    .bdi-orb-3 {
+        width: 400px; height: 400px;
+        background: radial-gradient(circle, #0ea5e9, transparent 70%);
+        top: 30%; left: 20%;
+        opacity: 0.15;
+        animation: bdiFloat 10s ease-in-out infinite;
+    }
+
+    @keyframes bdiFloat {
+        0%, 100% { transform: translateY(0px) scale(1); }
+        50% { transform: translateY(-40px) scale(1.05); }
+    }
+
+    .bdi-grid {
+        position: absolute;
+        inset: 0;
+        background-image: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+                          linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+        background-size: 40px 40px;
+    }
+
+    /* ===== PAGE WRAPPER ===== */
+    .bdi-page {
+        position: relative;
+        z-index: 1;
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 2rem 1.5rem 5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+    }
+
+    /* ===== HEADER CARD ===== */
+    .bdi-header-card {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 1.5rem;
+        padding: 2rem 2.5rem;
+        backdrop-filter: blur(24px);
+        -webkit-backdrop-filter: blur(24px);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+    }
+
+    .bdi-header-left {
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+    }
+
+    .bdi-header-icon {
+        font-size: 2.75rem;
+        background: linear-gradient(135deg, rgba(59,130,246,0.3), rgba(139,92,246,0.2));
+        width: 72px; height: 72px;
+        border-radius: 1.25rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: inset 0 2px 10px rgba(255,255,255,0.1), 0 4px 16px rgba(0,0,0,0.2);
+        flex-shrink: 0;
+        border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .bdi-title {
+        font-size: 2rem;
+        font-weight: 800;
+        color: #ffffff;
+        margin: 0;
+        line-height: 1.2;
+        letter-spacing: -0.02em;
+    }
+
+    .bdi-subtitle {
+        font-size: 0.95rem;
+        color: rgba(255,255,255,0.7);
+        margin: 0.4rem 0 0;
+    }
+
+    .bdi-back-btn {
+        background: rgba(255, 255, 255, 0.1);
+        color: #ffffff;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        padding: 0.75rem 1.5rem;
+        border-radius: 1rem;
+        font-weight: 700;
+        font-size: 0.9rem;
+        text-decoration: none;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        white-space: nowrap;
+        backdrop-filter: blur(10px);
+    }
+
+    .bdi-back-btn:hover {
+        background: rgba(255, 255, 255, 0.2);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+        border-color: rgba(255,255,255,0.3);
+    }
+
+    /* ===== ACCORDION GROUPS ===== */
+    .bdi-groups-container {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    .bdi-accordion-group {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 1.5rem;
+        overflow: hidden;
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        transition: all 0.3s ease;
+    }
+
+    .bdi-accordion-group:hover {
+        border-color: rgba(255, 255, 255, 0.2);
+        box-shadow: 0 15px 40px rgba(0,0,0,0.25);
+    }
+
+    .bdi-accordion-toggle {
+        width: 100%;
+        background: rgba(0, 0, 0, 0.15);
+        border: none;
+        padding: 1.5rem 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-align: left;
+    }
+
+    .bdi-accordion-toggle:hover {
+        background: rgba(255, 255, 255, 0.04);
+    }
+
+    .bdi-group-label {
+        display: flex;
+        align-items: center;
+        gap: 1.25rem;
+    }
+
+    .bdi-group-icon {
+        font-size: 1.75rem;
+        background: rgba(255,255,255,0.1);
+        width: 48px; height: 48px;
+        border-radius: 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        border: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .bdi-group-text {
+        display: flex;
+        flex-direction: column;
+        gap: 0.3rem;
+    }
+
+    .bdi-group-title {
+        font-size: 1.25rem;
+        font-weight: 800;
+        color: #ffffff;
+        letter-spacing: 0.01em;
+    }
+
+    .bdi-badges {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .bdi-badge {
+        font-size: 0.7rem;
+        padding: 0.2rem 0.6rem;
+        border-radius: 2rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+    }
+
+    .bdi-badge-blue { background: rgba(59, 130, 246, 0.2); color: #93c5fd; border: 1px solid rgba(59, 130, 246, 0.3); }
+    .bdi-badge-green { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .bdi-badge-purple { background: rgba(139, 92, 246, 0.2); color: #c4b5fd; border: 1px solid rgba(139, 92, 246, 0.3); }
+    .bdi-badge-gold { background: rgba(245, 158, 11, 0.2); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.3); }
+
+    .bdi-chevron {
+        font-size: 1rem;
+        color: rgba(255,255,255,0.5);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        width: 32px; height: 32px;
+        background: rgba(255,255,255,0.05);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .bdi-accordion-toggle.open .bdi-chevron {
+        transform: rotate(-180deg);
+        background: rgba(255,255,255,0.15);
+        color: #ffffff;
+    }
+
+    .bdi-accordion-body {
+        display: grid;
+        grid-template-rows: 0fr;
+        transition: grid-template-rows 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .bdi-accordion-body > div {
+        overflow: hidden;
+    }
+
+    .bdi-accordion-body.open {
+        grid-template-rows: 1fr;
+    }
+
+    /* ===== CARDS GRID ===== */
+    .bdi-cards-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 1.5rem;
+        padding: 1.5rem 2rem 2rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(0, 0, 0, 0.1);
+    }
+
+    /* ===== IMPORT CARD ===== */
+    .bdi-import-card {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 1.25rem;
+        padding: 1.5rem;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        border: 1px solid rgba(255,255,255,0.3);
+        display: flex;
+        flex-direction: column;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .bdi-import-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 15px 35px rgba(0,0,0,0.25);
+    }
+
+    .bdi-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1.25rem;
+    }
+
+    .bdi-card-header h4 {
+        margin: 0 0 0.3rem 0;
+        font-size: 1.15rem;
+        font-weight: 800;
+        color: #0f172a;
+    }
+
+    .bdi-card-header p {
+        margin: 0;
+        font-size: 0.85rem;
+        color: #64748b;
+        font-weight: 500;
+    }
+
+    .bdi-card-icon {
+        font-size: 1.5rem;
+        background: #f1f5f9;
+        width: 44px; height: 44px;
+        border-radius: 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    .bdi-card-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.25rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px dashed #cbd5e1;
+    }
+
+    .bdi-template-link {
+        font-size: 0.82rem;
+        font-weight: 700;
+        color: #2563eb;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        background: #eff6ff;
+        padding: 0.4rem 0.8rem;
+        border-radius: 2rem;
+        transition: all 0.2s;
+    }
+
+    .bdi-template-link:hover {
+        background: #dbeafe;
+        color: #1d4ed8;
+    }
+
+    .bdi-view-link {
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: #64748b;
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+
+    .bdi-view-link:hover {
+        color: #0f172a;
+        text-decoration: underline;
+    }
+
+    /* ===== FILE UPLOAD FORM ===== */
+    .bdi-upload-form {
+        display: flex;
+        flex-direction: column;
+        flex-grow: 1;
+        justify-content: flex-end;
+    }
+
+    .bdi-file-input-wrapper {
+        position: relative;
+        margin-bottom: 1rem;
+    }
+
+    .bdi-file-input {
+        width: 100%;
+        padding: 0.65rem 0.75rem;
+        border: 2px dashed #cbd5e1;
+        border-radius: 0.75rem;
+        background: #f8fafc;
+        color: #334155;
+        font-size: 0.85rem;
+        font-weight: 500;
+        outline: none;
+        transition: all 0.2s;
+        cursor: pointer;
+        box-sizing: border-box;
+    }
+
+    .bdi-file-input:hover, .bdi-file-input:focus {
+        border-color: #94a3b8;
+        background: #f1f5f9;
+    }
+
+    .bdi-file-input::file-selector-button {
+        background: #e2e8f0;
+        border: none;
+        padding: 0.4rem 0.8rem;
+        border-radius: 0.5rem;
+        color: #0f172a;
+        font-weight: 700;
+        font-size: 0.8rem;
+        cursor: pointer;
+        margin-right: 1rem;
+        transition: background 0.2s;
+        font-family: 'Inter', sans-serif;
+    }
+
+    .bdi-file-input::file-selector-button:hover {
+        background: #cbd5e1;
+    }
+
+    .bdi-btn {
+        width: 100%;
+        padding: 0.85rem;
+        border: none;
+        border-radius: 0.875rem;
+        font-weight: 700;
+        font-size: 0.95rem;
+        color: #ffffff;
+        cursor: pointer;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.2s;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        font-family: 'Inter', sans-serif;
+    }
+
+    .bdi-btn-icon {
+        background: rgba(255,255,255,0.2);
+        width: 24px; height: 24px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+    }
+
+    .bdi-btn-primary {
+        background: linear-gradient(135deg, #2563eb, #4f46e5);
+    }
+    .bdi-btn-primary:hover {
+        background: linear-gradient(135deg, #1d4ed8, #4338ca);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(37, 99, 235, 0.3);
+    }
+
+    .bdi-btn-secondary {
+        background: linear-gradient(135deg, #059669, #047857);
+    }
+    .bdi-btn-secondary:hover {
+        background: linear-gradient(135deg, #047857, #065f46);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(5, 150, 105, 0.3);
+    }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 768px) {
+        .bdi-header-card { flex-direction: column; align-items: flex-start; gap: 1.5rem; padding: 1.5rem; }
+        .bdi-accordion-toggle { padding: 1.25rem 1.5rem; }
+        .bdi-cards-grid { padding: 1rem 1.5rem 1.5rem; grid-template-columns: 1fr; }
+    }
+</style>
 
 <script>
     function toggleAccordion(btn) {
@@ -345,9 +770,16 @@
         const body = document.getElementById(bodyId);
         const isOpen = btn.classList.contains('open');
 
-        btn.classList.toggle('open', !isOpen);
-        body.classList.toggle('open', !isOpen);
-        btn.setAttribute('aria-expanded', String(!isOpen));
+        // Toggle state
+        if (isOpen) {
+            btn.classList.remove('open');
+            body.classList.remove('open');
+            btn.setAttribute('aria-expanded', 'false');
+        } else {
+            btn.classList.add('open');
+            body.classList.add('open');
+            btn.setAttribute('aria-expanded', 'true');
+        }
     }
 </script>
 {% endblock %}

@@ -21,5 +21,7 @@ urlpatterns = [
     path('start-session/<int:entry_id>/', StartAttendanceView.as_view(), name='start_attendance'),
     path('sessions/<int:pk>/reschedule/', RescheduleSessionView.as_view(), name='reschedule_session'),
     path('mark-missed-sessions/', MarkMissedSessionsView.as_view(), name='mark_missed_sessions'),
+    path('sessions/<int:pk>/confirm/', ConfirmSessionView.as_view(), name='confirm_session'),
+    path('sessions/<int:pk>/cancel/', CancelSessionView.as_view(), name='cancel_session'),
     path('generate-report/', GenerateReportView.as_view(), name='generate_report'),
 ]

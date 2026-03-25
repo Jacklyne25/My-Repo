@@ -524,33 +524,50 @@ class TeachingStaffDashboardView(RoleRequiredMixin, View):
         AlertService.auto_mark_missed_sessions()
 
         # 2. Today's Sessions for the lecturer
-        today_sessions = LectureSession.objects.filter(
-            date=today,
-            timetable_entry__lecturer=user
-        ).select_related(
-            'timetable_entry__course_unit',
-            'timetable_entry__program',
-            'timetable_entry__room'
-        ).order_by('timetable_entry__start_time')
+        # Derive today's day code (e.g. 'MON', 'TUE', 'WED', ...)
+        today_day_code = today.strftime('%a').upper()[:3]
 
-        # Add interaction metadata
-        now = timezone.now()
+        # Query timetable entries for this lecturer on today's day
+        today_entries = TimetableEntry.objects.filter(
+            lecturer=user,
+            day_of_week=today_day_code
+        ).select_related('course_unit', 'program', 'room').order_by('start_time')
+
+        # For each entry, find or pair the LectureSession for today
         from datetime import datetime, timedelta
-        for session in today_sessions:
-            start_time = session.timetable_entry.start_time
+        now = timezone.now()
+        today_sessions = []
+        for entry in today_entries:
+            session = LectureSession.objects.filter(timetable_entry=entry, date=today).first()
+            if not session:
+                session = LectureSession.objects.create(
+                    timetable_entry=entry,
+                    date=today,
+                    status='SCHEDULED'
+                )
+
+            # Build interaction metadata
+            start_time = entry.start_time
             session_start = timezone.make_aware(datetime.combine(today, start_time))
             window_start = session_start - timedelta(minutes=30)
-            
+
             if window_start <= now <= session_start:
-                session.can_interact = True
-                session.interaction_message = "Active"
+                can_interact = True
+                interaction_message = "Active"
             elif now < window_start:
-                session.can_interact = False
+                can_interact = False
                 mins_left = int((window_start - now).total_seconds() / 60)
-                session.interaction_message = f"Interaction opens in {mins_left}m"
+                interaction_message = f"Interaction opens in {mins_left}m"
             else:
-                session.can_interact = False
-                session.interaction_message = "Interaction closed"
+                can_interact = False
+                interaction_message = "Interaction closed"
+
+            today_sessions.append({
+                'entry': entry,
+                'session': session,
+                'can_interact': can_interact,
+                'interaction_message': interaction_message,
+            })
 
 
         # 3. Timetable Grid for the lecturer

@@ -18,7 +18,7 @@
             <div class="stats-icon">⏰</div>
             <div>
                 <h3 class="card-title-label">Today's Sessions</h3>
-                <p class="stat-value" style="color: #b45309;">{{ today_sessions.count }}</p>
+                <p class="stat-value" style="color: #b45309;">{{ today_sessions|length }}</p>
             </div>
         </div>
         <div class="card summary-card stats-verifications">
@@ -41,63 +41,73 @@
             
             {% if today_sessions %}
                 <div class="items-list">
-                    {% for session in today_sessions %}
+                    {% for item in today_sessions %}
                     <div class="schedule-item">
                         <div style="display: flex; align-items: center; gap: 1rem;">
                             <div class="time-badge">
-                                {{ session.timetable_entry.start_time|time:"H:i" }}
+                                {{ item.entry.start_time|time:"H:i" }}
                             </div>
                             <div>
-                                <h3 class="item-name">{{ session.timetable_entry.course_unit.name }}</h3>
+                                <h3 class="item-name">{{ item.entry.course_unit.name }}</h3>
                                 <div class="item-meta">
-                                    <span>📍 {{ session.timetable_entry.room.name }}</span>
-                                    <span>👥 {{ session.timetable_entry.program.code }}</span>
+                                    <span>📍 {{ item.entry.room.name }}</span>
+                                    <span>👥 {{ item.entry.program.code }}</span>
                                 </div>
                             </div>
                         </div>
                         <div style="display: flex; gap: 0.75rem; align-items: center;">
-                            {% if session.status == 'SUBMITTED' %}
-                                <form action="{% url 'attendance:validate_attendance' session.id %}" method="post" style="display: flex; gap: 0.5rem; align-items: center;">
-                                    {% csrf_token %}
-                                    <div class="duration-input-container">
-                                        <input type="number" name="actual_duration" step="0.5" value="2.0" class="duration-input" title="Actual Duration (hrs)">
-                                        <span style="font-size: 0.7rem; color: #64748b;">hrs</span>
-                                    </div>
-                                    <button type="submit" class="btn-colorful btn-orange btn-sm">Validate</button>
-                                </form>
-                            {% elif session.status == 'SCHEDULED' or session.status == 'LECTURER_CONFIRMED' %}
-                                <div style="display: flex; gap: 0.5rem; align-items: center;">
-                                    {% if session.can_interact %}
-                                        {% if session.status == 'SCHEDULED' %}
-                                        <form action="{% url 'attendance:confirm_session' session.id %}" method="post">
-                                            {% csrf_token %}
-                                            <button type="submit" class="btn-colorful btn-green btn-sm">Confirm</button>
-                                        </form>
-                                        {% endif %}
-                                        
-                                        <form action="{% url 'attendance:cancel_session' session.id %}" method="post" onsubmit="return confirm('Are you sure you want to cancel this session?')">
-                                            {% csrf_token %}
-                                            <button type="submit" class="btn-colorful btn-red btn-sm">Cancel</button>
-                                        </form>
-                        
-                                        <div class="reschedule-container">
-                                            <button onclick="toggleReschedule('{{ session.id }}')" class="btn-colorful btn-blue btn-sm">Reschedule</button>
-                                            <form id="reschedule-form-{{ session.id }}" action="{% url 'attendance:reschedule_session' session.id %}" method="post" class="reschedule-popup hidden">
-                                                {% csrf_token %}
-                                                <input type="date" name="new_date" value="{{ session.date|date:'Y-m-d' }}" required class="reschedule-input">
-                                                <button type="submit" class="btn-colorful btn-green btn-sm">Save</button>
-                                            </form>
+                            {% if item.session %}
+                                {% if item.session.status == 'SUBMITTED' %}
+                                    <form action="{% url 'attendance:validate_attendance' item.session.id %}" method="post" style="display: flex; gap: 0.5rem; align-items: center;">
+                                        {% csrf_token %}
+                                        <div class="duration-input-container">
+                                            <input type="number" name="actual_duration" step="0.5" value="2.0" class="duration-input" title="Actual Duration (hrs)">
+                                            <span style="font-size: 0.7rem; color: #64748b;">hrs</span>
                                         </div>
-                                    {% else %}
-                                        <span style="font-size: 0.75rem; color: #64748b; font-weight: 600; background: #f1f5f9; padding: 0.25rem 0.75rem; border-radius: 1rem; border: 1px solid #e2e8f0;">
-                                            {{ session.interaction_message }}
-                                        </span>
-                                    {% endif %}
-                                </div>
+                                        <button type="submit" class="btn-colorful btn-orange btn-sm">Validate</button>
+                                    </form>
+                                {% elif item.session.status == 'SCHEDULED' or item.session.status == 'LECTURER_CONFIRMED' %}
+                                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                        {% if item.can_interact %}
+                                            {% if item.session.status == 'SCHEDULED' %}
+                                            <form action="{% url 'attendance:confirm_session' item.session.id %}" method="post">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn-colorful btn-green btn-sm">Confirm</button>
+                                            </form>
+
+                                            <form action="{% url 'attendance:cancel_session' item.session.id %}" method="post" onsubmit="return confirm('Are you sure you want to cancel this session?')">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn-colorful btn-red btn-sm">Cancel</button>
+                                            </form>
+
+                                            <div class="reschedule-container">
+                                                <button onclick="toggleReschedule('{{ item.session.id }}')" class="btn-colorful btn-blue btn-sm">Reschedule</button>
+                                                <form id="reschedule-form-{{ item.session.id }}" action="{% url 'attendance:reschedule_session' item.session.id %}" method="post" class="reschedule-popup hidden">
+                                                    {% csrf_token %}
+                                                    <input type="date" name="new_date" value="{{ item.session.date|date:'Y-m-d' }}" required class="reschedule-input">
+                                                    <button type="submit" class="btn-colorful btn-green btn-sm">Save</button>
+                                                </form>
+                                            </div>
+                                            {% elif item.session.status == 'LECTURER_CONFIRMED' %}
+                                                <span class="status-pill status-confirmed">
+                                                    ✅ Confirmed 
+                                                </span>
+                                            {% endif %}
+                                        {% else %}
+                                            <span style="font-size: 0.75rem; color: #64748b; font-weight: 600; background: #f1f5f9; padding: 0.25rem 0.75rem; border-radius: 1rem; border: 1px solid #e2e8f0;">
+                                                {{ item.interaction_message }}
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                {% else %}
+                                    <span class="status-pill status-{{ item.session.status|lower }}">
+                                        {% if item.session.status == 'LECTURER_CONFIRMED' %}✅{% elif item.session.status == 'CANCELLED' %}⭕{% elif item.session.status == 'MISSED' %}⚠️{% else %}✨{% endif %}
+                                        {{ item.session.get_status_display }}
+                                    </span>
+                                {% endif %}
                             {% else %}
-                                <span class="status-pill status-{{ session.status|lower }}">
-                                    {% if session.status == 'LECTURER_CONFIRMED' %}✅{% elif session.status == 'CANCELLED' %}⭕{% elif session.status == 'MISSED' %}⚠️{% else %}✨{% endif %} 
-                                    {{ session.get_status_display }}
+                                <span style="font-size: 0.75rem; color: #64748b; font-weight: 600; background: #f1f5f9; padding: 0.25rem 0.75rem; border-radius: 1rem; border: 1px solid #e2e8f0;">
+                                    {{ item.interaction_message }}
                                 </span>
                             {% endif %}
                         </div>

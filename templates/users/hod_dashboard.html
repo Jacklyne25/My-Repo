@@ -6,13 +6,16 @@
 {% block content %}
 <style>
     body {
-        background: linear-gradient(135deg, #74b9ff 0%, #d1d8e0 100%);
+        background: linear-gradient(135deg, #0f2460 0%, #1e3a8a 40%, #3730a3 75%, #4c1d95 100%);
         background-attachment: fixed;
         background-position: center;
     }
     .dashboard-main-card {
-        background: var(--glass-bg, rgba(255, 255, 255, 0.9)) !important;
-        backdrop-filter: blur(12px);
+        background: rgba(255, 255, 255, 0.93) !important;
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+        border-radius: 1.5rem;
     }
 </style>
 <div class="card dashboard-main-card">
@@ -214,30 +217,27 @@
             <span>🔔</span> Compliance & Performance Highlights
         </h2>
 
-        <div style="display: flex; flex-direction: column; gap: 1rem;">
+        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
             {% for alert in hod_alerts %}
-            <div
-                style="background: rgba(255,255,255,0.03); padding: 1.25rem; border-radius: 0.75rem; border: 1px solid var(--border); display: flex; gap: 1.25rem; align-items: flex-start;">
-                {% if alert.severity == 'CRITICAL' %}
-                <span style="font-size: 1.2rem;">🔴</span>
-                {% elif alert.severity == 'WARNING' %}
-                <span style="font-size: 1.2rem;">🟡</span>
-                {% else %}
-                <span style="font-size: 1.2rem;">🔵</span>
-                {% endif %}
-
-                <div style="flex: 1;">
-                    <div style="font-weight: 600; font-size: 1rem; margin-bottom: 0.25rem;">{{ alert.message }}</div>
-                    <div
-                        style="display: flex; gap: 1rem; align-items: center; font-size: 0.8rem; color: var(--text-muted);">
-                        <span>{{ alert.created_at|timesince }} ago</span>
-                        <span style="background: rgba(255,255,255,0.05); padding: 2px 8px; border-radius: 4px;">{{
-                            alert.get_category_display }}</span>
+            <div style="display: flex; border-radius: 0.875rem; overflow: hidden; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.04); box-shadow: 0 2px 12px rgba(0,0,0,0.1); transition: transform 0.15s;">
+                <!-- Stripe -->
+                <div style="width: 5px; flex-shrink: 0;
+                    {% if alert.severity == 'CRITICAL' %}background: linear-gradient(180deg, #ef4444, #dc2626);
+                    {% elif alert.severity == 'WARNING' %}background: linear-gradient(180deg, #f59e0b, #d97706);
+                    {% else %}background: linear-gradient(180deg, #3b82f6, #2563eb);{% endif %}">
+                </div>
+                <div style="flex: 1; padding: 1rem 1.25rem; display: flex; gap: 1rem; align-items: flex-start;">
+                    <span style="font-size: 1.1rem; flex-shrink: 0;">
+                        {% if alert.severity == 'CRITICAL' %}🔴{% elif alert.severity == 'WARNING' %}🟡{% else %}🔵{% endif %}
+                    </span>
+                    <div style="flex: 1;">
+                        <div style="font-weight: 600; font-size: 0.95rem; margin-bottom: 0.35rem; color: var(--text-dark);">{{ alert.message }}</div>
+                        <div style="display: flex; gap: 0.75rem; align-items: center; font-size: 0.78rem; color: var(--text-muted);">
+                            <span>{{ alert.created_at|timesince }} ago</span>
+                            <span style="background: rgba(255,255,255,0.08); padding: 0.1rem 0.5rem; border-radius: 0.4rem; border: 1px solid rgba(255,255,255,0.1);">{{ alert.get_category_display }}</span>
+                        </div>
                     </div>
                 </div>
-
-                <a href="#"
-                    style="background: var(--primary); color: white; padding: 0.4rem 0.8rem; border-radius: 0.4rem; font-size: 0.8rem; text-decoration: none; font-weight: 500;">Resolve</a>
             </div>
             {% empty %}
             <div style="text-align: center; padding: 3rem 1rem; color: var(--text-muted);">

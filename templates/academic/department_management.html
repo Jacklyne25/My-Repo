@@ -1,37 +1,450 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Department Management{% endblock %}
 
 {% block content %}
-<div class="card">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-        <h1 style="color: var(--primary); margin: 0;">Department Management</h1>
-        <a href="{% url 'academic:faculty_dashboard' %}" class="btn"
-            style="background-color: var(--card-bg); border: 1px solid var(--border);">Back to Dashboard</a>
+
+<!-- ===== ANIMATED BACKGROUND GRAPHICS ===== -->
+<div class="dm-bg">
+    <div class="dm-orb dm-orb-1"></div>
+    <div class="dm-orb dm-orb-2"></div>
+    <div class="dm-orb dm-orb-3"></div>
+    <div class="dm-grid"></div>
+</div>
+
+<div class="dm-page">
+
+    <!-- ===== PAGE HEADER ===== -->
+    <div class="dm-header-card">
+        <div class="dm-header-left">
+            <div class="dm-header-icon">🏢</div>
+            <div>
+                <h1 class="dm-title">Department Management</h1>
+                <p class="dm-subtitle">
+                    {{ departments|length }} department{{ departments|length|pluralize }} registered
+                </p>
+            </div>
+        </div>
+        <a href="{% url 'academic:faculty_dashboard' %}" class="dm-back-btn">
+            ← Back to Dashboard
+        </a>
     </div>
 
-    <table style="width: 100%; border-collapse: collapse;">
-        <thead>
-            <tr style="text-align: left; border-bottom: 1px solid var(--border);">
-                <th style="padding: 1rem;">Name</th>
-                <th style="padding: 1rem;">Code</th>
-                <th style="padding: 1rem;">Faculty</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for dept in departments %}
-            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
-                <td style="padding: 1rem;"><strong>{{ dept.name }}</strong></td>
-                <td style="padding: 1rem;">{{ dept.code }}</td>
-                <td style="padding: 1rem;">{{ dept.faculty.name|default:"Unassigned" }}</td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="3" style="padding: 2rem; text-align: center; color: var(--text-muted);">No departments
-                    found.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <!-- ===== STATS ROW ===== -->
+    <div class="dm-stats-row">
+        <div class="dm-stat-card dm-stat-blue">
+            <div class="dm-stat-number">{{ departments|length }}</div>
+            <div class="dm-stat-label">Total Departments</div>
+        </div>
+        <div class="dm-stat-card dm-stat-green">
+            <div class="dm-stat-number">
+                {% with cnt=0 %}
+                {% for dept in departments %}{% if dept.faculty %}{% with cnt=cnt|add:1 %}{% endwith %}{% endif %}{% endfor %}
+                {% endwith %}
+                {{ departments|length }}
+            </div>
+            <div class="dm-stat-label">Active Units</div>
+        </div>
+        <div class="dm-stat-card dm-stat-purple">
+            <div class="dm-stat-number">
+                {% regroup departments by faculty as faculty_list %}
+                {{ faculty_list|length }}
+            </div>
+            <div class="dm-stat-label">Faculties</div>
+        </div>
+    </div>
+
+    <!-- ===== DEPARTMENT TABLE CARD ===== -->
+    <div class="dm-table-card">
+        <div class="dm-table-header">
+            <h2 class="dm-table-title">All Departments</h2>
+            <div class="dm-search-wrap">
+                <input type="text" id="deptSearch" placeholder="🔍  Search departments..." class="dm-search" oninput="filterDepts(this.value)">
+            </div>
+        </div>
+
+        <div class="dm-table-wrap">
+            <table class="dm-table" id="deptTable">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Department Name</th>
+                        <th>Code</th>
+                        <th>Faculty</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for dept in departments %}
+                    <tr class="dm-row">
+                        <td class="dm-row-num">{{ forloop.counter }}</td>
+                        <td>
+                            <div class="dm-dept-name">{{ dept.name }}</div>
+                        </td>
+                        <td>
+                            <span class="dm-code-pill">{{ dept.code }}</span>
+                        </td>
+                        <td>
+                            {% if dept.faculty %}
+                                <span class="dm-faculty-tag">{{ dept.faculty.name }}</span>
+                            {% else %}
+                                <span class="dm-unassigned">Unassigned</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="dm-status-pill dm-status-active">● Active</span>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="dm-empty">
+                            <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">🏗️</div>
+                            <div>No departments found.</div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
 </div>
+
+<style>
+    /* ===== BACKGROUND ===== */
+    body {
+        background: linear-gradient(135deg, #0c1445 0%, #1a237e 35%, #283593 65%, #1565c0 100%);
+        background-attachment: fixed;
+        min-height: 100vh;
+        overflow-x: hidden;
+    }
+
+    .dm-bg {
+        position: fixed;
+        inset: 0;
+        z-index: 0;
+        pointer-events: none;
+        overflow: hidden;
+    }
+
+    /* Glowing orbs */
+    .dm-orb {
+        position: absolute;
+        border-radius: 50%;
+        filter: blur(80px);
+        opacity: 0.35;
+    }
+
+    .dm-orb-1 {
+        width: 500px; height: 500px;
+        background: radial-gradient(circle, #7c3aed, transparent 70%);
+        top: -150px; right: -100px;
+        animation: orbFloat 8s ease-in-out infinite;
+    }
+
+    .dm-orb-2 {
+        width: 400px; height: 400px;
+        background: radial-gradient(circle, #0ea5e9, transparent 70%);
+        bottom: 10%; left: -80px;
+        animation: orbFloat 11s ease-in-out infinite reverse;
+    }
+
+    .dm-orb-3 {
+        width: 300px; height: 300px;
+        background: radial-gradient(circle, #10b981, transparent 70%);
+        top: 40%; right: 15%;
+        opacity: 0.2;
+        animation: orbFloat 14s ease-in-out infinite;
+    }
+
+    @keyframes orbFloat {
+        0%, 100% { transform: translateY(0px) scale(1); }
+        50% { transform: translateY(-30px) scale(1.05); }
+    }
+
+    /* Subtle dot grid */
+    .dm-grid {
+        position: absolute;
+        inset: 0;
+        background-image: radial-gradient(circle, rgba(255,255,255,0.07) 1px, transparent 1px);
+        background-size: 36px 36px;
+    }
+
+    /* ===== PAGE WRAPPER ===== */
+    .dm-page {
+        position: relative;
+        z-index: 1;
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 0 1.5rem 4rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    /* ===== HEADER CARD ===== */
+    .dm-header-card {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 1.5rem;
+        padding: 1.75rem 2rem;
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+    }
+
+    .dm-header-left {
+        display: flex;
+        align-items: center;
+        gap: 1.25rem;
+    }
+
+    .dm-header-icon {
+        font-size: 2.25rem;
+        background: rgba(255,255,255,0.15);
+        width: 64px; height: 64px;
+        border-radius: 1.25rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+        flex-shrink: 0;
+    }
+
+    .dm-title {
+        font-size: 1.75rem;
+        font-weight: 800;
+        color: #ffffff;
+        margin: 0;
+        line-height: 1.2;
+    }
+
+    .dm-subtitle {
+        font-size: 0.875rem;
+        color: rgba(255,255,255,0.6);
+        margin: 0.25rem 0 0;
+    }
+
+    .dm-back-btn {
+        background: rgba(255, 255, 255, 0.12);
+        color: #ffffff;
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        padding: 0.65rem 1.4rem;
+        border-radius: 0.875rem;
+        font-weight: 700;
+        font-size: 0.875rem;
+        text-decoration: none;
+        transition: all 0.2s;
+        white-space: nowrap;
+    }
+
+    .dm-back-btn:hover {
+        background: rgba(255, 255, 255, 0.22);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+    }
+
+    /* ===== STATS ROW ===== */
+    .dm-stats-row {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+    }
+
+    .dm-stat-card {
+        border-radius: 1.25rem;
+        padding: 1.5rem;
+        text-align: center;
+        backdrop-filter: blur(16px);
+        border: 1px solid rgba(255,255,255,0.15);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+        transition: transform 0.2s;
+    }
+
+    .dm-stat-card:hover { transform: translateY(-4px); }
+
+    .dm-stat-blue   { background: linear-gradient(135deg, rgba(37,99,235,0.35), rgba(59,130,246,0.2)); }
+    .dm-stat-green  { background: linear-gradient(135deg, rgba(5,150,105,0.35), rgba(16,185,129,0.2)); }
+    .dm-stat-purple { background: linear-gradient(135deg, rgba(124,58,237,0.35), rgba(139,92,246,0.2)); }
+
+    .dm-stat-number {
+        font-size: 2.75rem;
+        font-weight: 900;
+        color: #ffffff;
+        line-height: 1;
+        margin-bottom: 0.4rem;
+    }
+
+    .dm-stat-label {
+        font-size: 0.8rem;
+        color: rgba(255,255,255,0.65);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+    }
+
+    /* ===== TABLE CARD ===== */
+    .dm-table-card {
+        background: rgba(255, 255, 255, 0.94);
+        border: 1px solid rgba(255, 255, 255, 0.6);
+        border-radius: 1.5rem;
+        overflow: hidden;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+
+    .dm-table-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.5rem 2rem;
+        border-bottom: 1px solid #e2e8f0;
+        background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .dm-table-title {
+        font-size: 1.1rem;
+        font-weight: 800;
+        color: #1e293b;
+        margin: 0;
+    }
+
+    .dm-search {
+        padding: 0.55rem 1rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.875rem;
+        font-size: 0.875rem;
+        width: 240px;
+        background: #ffffff;
+        color: #1e293b;
+        outline: none;
+        transition: all 0.2s;
+        box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .dm-search:focus {
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    }
+
+    .dm-table-wrap { overflow-x: auto; }
+
+    .dm-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .dm-table thead tr {
+        background: linear-gradient(90deg, #1e3a8a, #2563eb);
+    }
+
+    .dm-table thead th {
+        padding: 1rem 1.25rem;
+        text-align: left;
+        font-size: 0.78rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: rgba(255, 255, 255, 0.85);
+    }
+
+    .dm-table thead th:first-child { border-radius: 0; }
+
+    .dm-row {
+        border-bottom: 1px solid #f1f5f9;
+        transition: background 0.15s;
+    }
+
+    .dm-row:hover { background: #f8faff; }
+    .dm-row:last-child { border-bottom: none; }
+
+    .dm-row td {
+        padding: 1rem 1.25rem;
+        vertical-align: middle;
+    }
+
+    .dm-row-num {
+        color: #94a3b8;
+        font-size: 0.8rem;
+        font-weight: 700;
+        width: 40px;
+    }
+
+    .dm-dept-name {
+        font-weight: 700;
+        color: #1e293b;
+        font-size: 0.95rem;
+    }
+
+    .dm-code-pill {
+        background: #dbeafe;
+        color: #1d4ed8;
+        padding: 0.25rem 0.75rem;
+        border-radius: 2rem;
+        font-size: 0.78rem;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        white-space: nowrap;
+    }
+
+    .dm-faculty-tag {
+        background: #f0fdf4;
+        color: #15803d;
+        padding: 0.25rem 0.75rem;
+        border-radius: 0.5rem;
+        font-size: 0.82rem;
+        font-weight: 600;
+        border: 1px solid #bbf7d0;
+    }
+
+    .dm-unassigned {
+        color: #94a3b8;
+        font-size: 0.82rem;
+        font-style: italic;
+    }
+
+    .dm-status-pill {
+        font-size: 0.75rem;
+        font-weight: 700;
+        padding: 0.2rem 0.7rem;
+        border-radius: 2rem;
+    }
+
+    .dm-status-active {
+        background: #dcfce7;
+        color: #16a34a;
+    }
+
+    .dm-empty {
+        padding: 3rem;
+        text-align: center;
+        color: #94a3b8;
+        font-size: 0.95rem;
+    }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 640px) {
+        .dm-stats-row { grid-template-columns: 1fr; }
+        .dm-header-card { flex-direction: column; align-items: flex-start; gap: 1rem; }
+        .dm-search { width: 100%; }
+        .dm-table-header { flex-direction: column; align-items: flex-start; }
+    }
+</style>
+
+<script>
+    function filterDepts(query) {
+        const rows = document.querySelectorAll('#deptTable tbody .dm-row');
+        const q = query.toLowerCase();
+        rows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            row.style.display = text.includes(q) ? '' : 'none';
+        });
+    }
+</script>
+
 {% endblock %}

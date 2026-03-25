@@ -112,8 +112,9 @@ class AlertService:
     def notify_session_rescheduled(session, lecturer):
         # Notify coordinator of the group
         coordinator = User.objects.filter(course_group=session.timetable_entry.course_group, role=User.Role.COORDINATOR).first()
+        message = f"LECTURE RESCHEDULED: {session.timetable_entry.course_unit.code} has been moved to {session.date} by {lecturer.get_full_name() or lecturer.username}."
+        
         if coordinator:
-            message = f"LECTURE RESCHEDULED: {session.timetable_entry.course_unit.code} has been moved to {session.date} by {lecturer.get_full_name() or lecturer.username}."
             AlertService.create_alert(
                 user=coordinator,
                 category=Alert.Category.TIMETABLE,
@@ -121,6 +122,67 @@ class AlertService:
                 alert_type="SESSION_RESCHEDULED",
                 message=message
             )
+            
+        # Notify affected students
+        students = User.objects.filter(course_group=session.timetable_entry.course_group, role=User.Role.STUDENT, is_active=True)
+        alerts = [
+            Alert(
+                user=str,
+                category=Alert.Category.TIMETABLE,
+                severity=Alert.Severity.WARNING,
+                type="SESSION_RESCHEDULED",
+                message=message
+            ) for str in students
+        ]
+        if alerts:
+            Alert.objects.bulk_create(alerts)
+
+    @staticmethod
+    def notify_session_confirmed(session, lecturer):
+        # Notify affected students
+        students = User.objects.filter(course_group=session.timetable_entry.course_group, role=User.Role.STUDENT, is_active=True)
+        room_name = session.timetable_entry.room.name if session.timetable_entry.room else "the assigned room"
+        message = f"LECTURE CONFIRMED: {session.timetable_entry.course_unit.code} is confirmed to take place today in {room_name}."
+        alerts = [
+            Alert(
+                user=student,
+                category=Alert.Category.TIMETABLE,
+                severity=Alert.Severity.INFO,
+                type="SESSION_CONFIRMED",
+                message=message
+            ) for student in students
+        ]
+        if alerts:
+            Alert.objects.bulk_create(alerts)
+
+    @staticmethod
+    def notify_session_cancelled(session, lecturer):
+        # Notify coordinator
+        coordinator = User.objects.filter(course_group=session.timetable_entry.course_group, role=User.Role.COORDINATOR).first()
+        message = f"LECTURE CANCELLED: {session.timetable_entry.course_unit.code} scheduled for today has been cancelled by {lecturer.get_full_name() or lecturer.username}."
+        
+        if coordinator:
+            AlertService.create_alert(
+                user=coordinator,
+                category=Alert.Category.TIMETABLE,
+                severity=Alert.Severity.CRITICAL,
+                alert_type="SESSION_CANCELLED",
+                message=message
+            )
+            
+        # Notify affected students
+        students = User.objects.filter(course_group=session.timetable_entry.course_group, role=User.Role.STUDENT, is_active=True)
+        alerts = [
+            Alert(
+                user=student,
+                category=Alert.Category.TIMETABLE,
+                severity=Alert.Severity.CRITICAL,
+                type="SESSION_CANCELLED",
+                message=message
+            ) for student in students
+        ]
+        if alerts:
+            Alert.objects.bulk_create(alerts)
 
     @staticmethod
     def notify_attendance_recorded(session, recorded_by):

@@ -3,114 +3,424 @@
 {% block title %}Notifications{% endblock %}
 
 {% block content %}
-<div class="row mb-4 align-items-center">
-    <div class="col">
-        <h2 class="h3 mb-0">Notifications</h2>
-    </div>
-    <div class="col-auto">
+
+<div class="notif-page">
+    <!-- Page Header -->
+    <div class="notif-header">
+        <div class="notif-header-left">
+            <div class="notif-icon-wrap">🔔</div>
+            <div>
+                <h1 class="notif-title">Notifications</h1>
+                <p class="notif-subtitle">
+                    {% with notifications|length as total %}
+                        {% if total %}{{ total }} notification{{ total|pluralize }}{% else %}No notifications{% endif %}
+                    {% endwith %}
+                </p>
+            </div>
+        </div>
         <form method="post" action="{% url 'core:mark_all_read' %}">
             {% csrf_token %}
-            <button type="submit" class="btn btn-outline">Mark All as Read</button>
+            <button type="submit" class="btn-mark-all">
+                ✅ Mark All as Read
+            </button>
         </form>
     </div>
-</div>
 
-<div class="card bg-white shadow-sm">
-    <div class="list-group list-group-flush">
+    <!-- Notification Cards -->
+    <div class="notif-list">
         {% for alert in notifications %}
-        <div class="list-group-item p-4 {% if not alert.is_read %}bg-light border-start border-primary border-4{% endif %}">
-            <div class="d-flex w-100 justify-content-between align-items-start mb-2">
-                <h5 class="mb-1 d-flex align-items-center gap-2">
-                    {% if alert.type == 'ANNOUNCEMENT' %}
-                        <span class="badge bg-info text-dark">📢 Announcement</span>
-                    {% else %}
-                        <span class="badge bg-secondary">{{ alert.get_category_display }}</span>
-                    {% endif %}
-                    
-                    {% if not alert.is_read %}
-                        <span class="badge bg-primary rounded-pill" style="font-size: 0.6rem;">New</span>
-                    {% endif %}
-                </h5>
-                <small class="text-muted">{{ alert.created_at|timesince }} ago</small>
+        <div class="notif-card {% if not alert.is_read %}notif-unread{% else %}notif-read{% endif %}">
+            <!-- Severity Stripe -->
+            <div class="notif-stripe
+                {% if alert.severity == 'CRITICAL' %}stripe-critical
+                {% elif alert.severity == 'WARNING' %}stripe-warning
+                {% else %}stripe-info{% endif %}">
             </div>
-            
-            <p class="mb-2 text-dark">{{ alert.message }}</p>
-            
-            {% if not alert.is_read %}
-            <div class="d-flex justify-content-end mt-2">
-                <form method="post" action="{% url 'core:mark_alert_read' alert.id %}">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-outline-primary shadow-none" style="padding: 0.2rem 0.5rem; font-size: 0.8rem;">
-                        Mark Read
-                    </button>
-                </form>
+
+            <div class="notif-body">
+                <!-- Top Row: badges + time -->
+                <div class="notif-top-row">
+                    <div class="notif-badges">
+                        {% if alert.type == 'ANNOUNCEMENT' %}
+                            <span class="badge badge-announcement">📢 Announcement</span>
+                        {% else %}
+                            <span class="badge badge-category">{{ alert.get_category_display }}</span>
+                        {% endif %}
+                        {% if not alert.is_read %}
+                            <span class="badge badge-new">New</span>
+                        {% endif %}
+                    </div>
+                    <span class="notif-time">{{ alert.created_at|timesince }} ago</span>
+                </div>
+
+                <!-- Message -->
+                <p class="notif-message">{{ alert.message }}</p>
+
+                <!-- Action -->
+                {% if not alert.is_read %}
+                <div class="notif-footer">
+                    <form method="post" action="{% url 'core:mark_alert_read' alert.id %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn-mark-read">Mark Read</button>
+                    </form>
+                </div>
+                {% else %}
+                <div class="notif-footer">
+                    <span class="read-label">✓ Read</span>
+                </div>
+                {% endif %}
             </div>
-            {% endif %}
         </div>
         {% empty %}
-        <div class="p-5 text-center text-muted">
-            <div class="fs-1 mb-3">📭</div>
-            <p class="lead mb-0">You have no notifications at this time.</p>
+        <div class="notif-empty">
+            <div class="empty-icon">📭</div>
+            <p class="empty-title">You're all caught up!</p>
+            <p class="empty-sub">No notifications at this time.</p>
         </div>
         {% endfor %}
     </div>
+
 </div>
 
-{% if is_paginated %}
-<div class="d-flex justify-content-center mt-4">
-    <nav aria-label="Notifications Pagination">
-        <ul class="pagination pagination-sm">
-            {% if page_obj.has_previous %}
-            <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>
-            {% endif %}
-            
-            <li class="page-item active"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
-            
-            {% if page_obj.has_next %}
-            <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>
-            {% endif %}
-        </ul>
+<!-- Fixed Bottom Pagination Bar (always visible) -->
+<div class="pagination-bar">
+    <nav class="pagination">
+        {% if is_paginated and page_obj.has_previous %}
+        <a class="page-btn" href="?page={{ page_obj.previous_page_number }}">← Previous</a>
+        {% else %}
+        <span class="page-btn page-btn-disabled">← Previous</span>
+        {% endif %}
+
+        {% if is_paginated %}
+        <span class="page-info">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        {% else %}
+        <span class="page-info">Page 1 of 1</span>
+        {% endif %}
+
+        {% if is_paginated and page_obj.has_next %}
+        <a class="page-btn" href="?page={{ page_obj.next_page_number }}">Next →</a>
+        {% else %}
+        <span class="page-btn page-btn-disabled">Next →</span>
+        {% endif %}
     </nav>
 </div>
-{% endif %}
 
 <style>
-    /* Add some basic Bootstrap-like utility classes since base.html doesn't load full BS5 */
-    .row { display: flex; flex-wrap: wrap; margin-left: -0.5rem; margin-right: -0.5rem; }
-    .col { flex: 1 0 0%; padding: 0 0.5rem; }
-    .col-auto { flex: 0 0 auto; width: auto; padding: 0 0.5rem; }
-    .align-items-center { align-items: center; }
-    .mb-4 { margin-bottom: 1.5rem; }
-    .mb-0 { margin-bottom: 0; }
-    .list-group { display: flex; flex-direction: column; padding-left: 0; margin-bottom: 0; }
-    .list-group-flush>.list-group-item { border-width: 0 0 1px; }
-    .list-group-flush>.list-group-item:last-child { border-bottom-width: 0; }
-    .list-group-item { position: relative; display: block; padding: 0.5rem 1rem; color: #212529; text-decoration: none; background-color: #fff; border: 1px solid rgba(0,0,0,.125); }
-    .bg-light { background-color: #f8f9fa!important; }
-    .bg-primary { background-color: var(--primary)!important; color: white; }
-    .bg-info { background-color: #0dcaf0!important; }
-    .bg-secondary { background-color: #6c757d!important; color: white; }
-    .border-start { border-left: 1px solid #dee2e6!important; }
-    .border-4 { border-left-width: 4px!important; }
-    .border-primary { border-color: var(--primary)!important; }
-    .d-flex { display: flex; }
-    .w-100 { width: 100%; }
-    .justify-content-between { justify-content: space-between; }
-    .justify-content-end { justify-content: flex-end; }
-    .justify-content-center { justify-content: center; }
-    .align-items-start { align-items: flex-start; }
-    .gap-2 { gap: 0.5rem; }
-    .badge { display: inline-block; padding: 0.35em 0.65em; font-size: .75em; font-weight: 700; line-height: 1; color: #fff; text-align: center; white-space: nowrap; vertical-align: baseline; border-radius: 0.25rem; }
-    .rounded-pill { border-radius: 50rem!important; }
-    .mt-2 { margin-top: 0.5rem; }
-    .mt-4 { margin-top: 1.5rem; }
-    .p-4 { padding: 1.5rem!important; }
-    .p-5 { padding: 3rem!important; }
-    .btn-sm { padding: .25rem .5rem; font-size: .875rem; border-radius: .2rem; }
-    .btn-outline-primary { color: var(--primary); border-color: var(--primary); background: transparent; border: 1px solid; }
-    .btn-outline-primary:hover { color: #fff; background-color: var(--primary); }
-    .pagination { display: flex; padding-left: 0; list-style: none; }
-    .page-item.active .page-link { z-index: 3; color: #fff; background-color: var(--primary); border-color: var(--primary); }
-    .page-link { position: relative; display: block; color: var(--primary); text-decoration: none; background-color: #fff; border: 1px solid #dee2e6; padding: .375rem .75rem; }
+    /* ===== PAGE BACKGROUND ===== */
+    body {
+        background: linear-gradient(135deg, #1e3a8a 0%, #312e81 50%, #4c1d95 100%);
+        background-attachment: fixed;
+        min-height: 100vh;
+    }
+
+    /* ===== PAGE WRAPPER ===== */
+    .notif-page {
+        max-width: 820px;
+        margin: 0 auto;
+        padding: 0 1rem 6rem; /* extra bottom padding for fixed bar */
+    }
+
+    /* ===== HEADER ===== */
+    .notif-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        padding: 1.75rem 2rem;
+        background: rgba(255, 255, 255, 0.12);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 1.5rem;
+        backdrop-filter: blur(20px);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    }
+
+    .notif-header-left {
+        display: flex;
+        align-items: center;
+        gap: 1.25rem;
+    }
+
+    .notif-icon-wrap {
+        font-size: 2rem;
+        background: rgba(255, 255, 255, 0.15);
+        width: 60px;
+        height: 60px;
+        border-radius: 1.25rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .notif-title {
+        font-size: 1.6rem;
+        font-weight: 800;
+        color: #ffffff;
+        margin: 0;
+    }
+
+    .notif-subtitle {
+        font-size: 0.875rem;
+        color: rgba(255, 255, 255, 0.65);
+        margin: 0.15rem 0 0;
+    }
+
+    .btn-mark-all {
+        background: rgba(255, 255, 255, 0.15);
+        color: #ffffff;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        padding: 0.65rem 1.4rem;
+        border-radius: 0.875rem;
+        font-weight: 700;
+        font-size: 0.875rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        backdrop-filter: blur(10px);
+    }
+
+    .btn-mark-all:hover {
+        background: rgba(255, 255, 255, 0.25);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+    }
+
+    /* ===== NOTIFICATION LIST ===== */
+    .notif-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    /* ===== NOTIFICATION CARD ===== */
+    .notif-card {
+        display: flex;
+        border-radius: 1.25rem;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+        backdrop-filter: blur(20px);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .notif-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25);
+    }
+
+    .notif-unread {
+        background: rgba(255, 255, 255, 0.95);
+    }
+
+    .notif-read {
+        background: rgba(255, 255, 255, 0.75);
+    }
+
+    /* ===== COLOUR STRIPE ===== */
+    .notif-stripe {
+        width: 6px;
+        flex-shrink: 0;
+    }
+    .stripe-critical { background: linear-gradient(180deg, #ef4444, #dc2626); }
+    .stripe-warning  { background: linear-gradient(180deg, #f59e0b, #d97706); }
+    .stripe-info     { background: linear-gradient(180deg, #3b82f6, #2563eb); }
+
+    /* ===== CARD BODY ===== */
+    .notif-body {
+        flex: 1;
+        padding: 1.25rem 1.5rem;
+    }
+
+    .notif-top-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.75rem;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .notif-badges {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 2rem;
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.03em;
+    }
+
+    .badge-announcement {
+        background: #dbeafe;
+        color: #1d4ed8;
+    }
+
+    .badge-category {
+        background: #f3f4f6;
+        color: #374151;
+        border: 1px solid #e5e7eb;
+    }
+
+    .badge-new {
+        background: #2563eb;
+        color: #ffffff;
+        animation: pulse-badge 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-badge {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4); }
+        50% { box-shadow: 0 0 0 6px rgba(37, 99, 235, 0); }
+    }
+
+    .notif-time {
+        font-size: 0.78rem;
+        color: #94a3b8;
+        font-weight: 500;
+        white-space: nowrap;
+    }
+
+    .notif-message {
+        font-size: 0.95rem;
+        color: #1e293b;
+        line-height: 1.65;
+        margin: 0 0 0.75rem;
+    }
+
+    .notif-read .notif-message {
+        color: #475569;
+    }
+
+    .notif-footer {
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    .btn-mark-read {
+        background: #2563eb;
+        color: white;
+        border: none;
+        padding: 0.35rem 1rem;
+        border-radius: 0.6rem;
+        font-size: 0.8rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-mark-read:hover {
+        background: #1d4ed8;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+    }
+
+    .read-label {
+        font-size: 0.78rem;
+        color: #94a3b8;
+        font-weight: 600;
+    }
+
+    /* ===== EMPTY STATE ===== */
+    .notif-empty {
+        text-align: center;
+        padding: 4rem 2rem;
+        background: rgba(255, 255, 255, 0.88);
+        border-radius: 1.5rem;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    }
+
+    .empty-icon {
+        font-size: 3.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .empty-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #1e293b;
+        margin: 0 0 0.5rem;
+    }
+
+    .empty-sub {
+        color: #94a3b8;
+        font-size: 0.9rem;
+        margin: 0;
+    }
+
+    /* ===== FIXED BOTTOM PAGINATION BAR ===== */
+    .pagination-bar {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 200;
+        display: flex;
+        justify-content: flex-start;
+        padding: 0.75rem 2.5rem;
+        background: rgba(15, 23, 60, 0.75);
+        backdrop-filter: blur(24px);
+        -webkit-backdrop-filter: blur(24px);
+        border-top: 1px solid rgba(255, 255, 255, 0.12);
+        box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.3);
+    }
+
+    .pagination-bar .pagination {
+        /* Override the inline-style from the old .pagination-wrap */
+        background: transparent;
+        border: none;
+        padding: 0;
+        margin: 0 !important;
+        box-shadow: none;
+        backdrop-filter: none;
+        gap: 1rem;
+    }
+
+    .page-btn-disabled {
+        color: rgba(255, 255, 255, 0.3);
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        cursor: not-allowed;
+        pointer-events: none;
+        padding: 0.4rem 0.9rem;
+        border-radius: 0.6rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+
+    .page-btn {
+        color: #ffffff;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 0.875rem;
+        padding: 0.4rem 0.9rem;
+        border-radius: 0.6rem;
+        background: rgba(255, 255, 255, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        transition: all 0.2s;
+        display: inline-block;
+    }
+
+    .page-btn:hover {
+        background: rgba(255, 255, 255, 0.28);
+        transform: translateY(-1px);
+    }
+
+    .page-info {
+        font-size: 0.875rem;
+        color: rgba(255, 255, 255, 0.8);
+        font-weight: 600;
+        letter-spacing: 0.02em;
+    }
+
+    .pagination {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
 </style>
+
 {% endblock %}

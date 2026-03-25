@@ -221,6 +221,11 @@ class RescheduleSessionView(LecturerRequiredMixin, View):
     """Allow lecturers to reschedule a session to a future date."""
     def post(self, request, pk):
         session = get_object_or_404(LectureSession, pk=pk, timetable_entry__lecturer=request.user)
+        
+        if session.status == LectureSession.Status.LECTURER_CONFIRMED:
+            messages.error(request, "Action Blocked: A confirmed session cannot be rescheduled.")
+            return redirect(request.META.get('HTTP_REFERER', 'users:teaching_staff_dashboard'))
+
         new_date_str = request.POST.get('new_date')
         
         if not new_date_str:
@@ -248,7 +253,7 @@ class RescheduleSessionView(LecturerRequiredMixin, View):
                     session.status = LectureSession.Status.RESCHEDULED
                     session.save()
                     messages.success(request, f"Session originally for {old_date} has been rescheduled to {new_date}.")
-                    # Notify coordinator
+                    # Notify coordinator and students
                     AlertService.notify_session_rescheduled(session, request.user)
         except ValueError:
             messages.error(request, "Invalid date format.")
@@ -260,6 +265,10 @@ class ConfirmSessionView(LecturerRequiredMixin, View):
     def post(self, request, pk):
         session = get_object_or_404(LectureSession, pk=pk, timetable_entry__lecturer=request.user)
         
+        if session.status == LectureSession.Status.LECTURER_CONFIRMED:
+            messages.info(request, "Session is already confirmed.")
+            return redirect(request.META.get('HTTP_REFERER', 'users:teaching_staff_dashboard'))
+
         # Check interaction window (0-30 mins before)
         now = timezone.now()
         start_time = session.timetable_entry.start_time
@@ -272,10 +281,12 @@ class ConfirmSessionView(LecturerRequiredMixin, View):
              messages.success(request, "Session already active. Setting status to Confirmed.")
              session.status = LectureSession.Status.LECTURER_CONFIRMED
              session.save()
+             AlertService.notify_session_confirmed(session, request.user)
         else:
             session.status = LectureSession.Status.LECTURER_CONFIRMED
             session.save()
             messages.success(request, "Session confirmed. You are expected for this lecture.")
+            AlertService.notify_session_confirmed(session, request.user)
             
         return redirect(request.META.get('HTTP_REFERER', 'users:teaching_staff_dashboard'))
 
@@ -284,6 +295,10 @@ class CancelSessionView(LecturerRequiredMixin, View):
     def post(self, request, pk):
         session = get_object_or_404(LectureSession, pk=pk, timetable_entry__lecturer=request.user)
         
+        if session.status == LectureSession.Status.LECTURER_CONFIRMED:
+            messages.error(request, "Action Blocked: A confirmed session cannot be cancelled.")
+            return redirect(request.META.get('HTTP_REFERER', 'users:teaching_staff_dashboard'))
+
         # Interaction window check
         now = timezone.now()
         start_time = session.timetable_entry.start_time
@@ -297,7 +312,8 @@ class CancelSessionView(LecturerRequiredMixin, View):
         else:
             session.status = LectureSession.Status.CANCELLED
             session.save()
-            messages.warning(request, "Session has been cancelled. Coordination staff will be notified.")
+            messages.warning(request, "Session has been cancelled. Coordination staff and students will be notified.")
+            AlertService.notify_session_cancelled(session, request.user)
             
         return redirect(request.META.get('HTTP_REFERER', 'users:teaching_staff_dashboard'))
 
