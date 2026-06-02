@@ -24,8 +24,8 @@
                 </p>
             </div>
         </div>
-        <a href="{% url 'users:hod_dashboard' %}" class="bdi-back-btn">
-            ← Back to Dashboard
+        <a href="{% url 'users:hod_dashboard' %}" class="btn-home">
+            <span style="font-size: 1.25rem;">🏠</span> Return to home
         </a>
     </div>
 
@@ -125,6 +125,32 @@
                             </div>
                             <button type="submit" class="bdi-btn bdi-btn-primary">
                                 <span>Upload Coordinators</span>
+                                <span class="bdi-btn-icon">↑</span>
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Elective Enrollment -->
+                    <div class="bdi-import-card">
+                        <div class="bdi-card-header">
+                            <div>
+                                <h4>Elective Enrollment</h4>
+                                <p>Upload student-to-elective mapping.</p>
+                            </div>
+                            <div class="bdi-card-icon">📝</div>
+                        </div>
+                        <div class="bdi-card-actions">
+                            <a href="{% url 'academic:download_template' 'elective_enrollment' %}" class="bdi-template-link">📄 Download Template</a>
+                            <span class="bdi-view-link">HOD Oversight</span>
+                        </div>
+                        <form method="post" enctype="multipart/form-data" class="bdi-upload-form">
+                            {% csrf_token %}
+                            <input type="hidden" name="import_type" value="elective_enrollment">
+                            <div class="bdi-file-input-wrapper">
+                                <input type="file" name="file" accept=".csv,.xlsx,.xls" required class="bdi-file-input">
+                            </div>
+                            <button type="submit" class="bdi-btn bdi-btn-primary" style="background: linear-gradient(135deg, #6366f1, #a855f7);">
+                                <span>Upload Enrollments</span>
                                 <span class="bdi-btn-icon">↑</span>
                             </button>
                         </form>
@@ -415,25 +441,30 @@
         margin: 0.4rem 0 0;
     }
 
-    .bdi-back-btn {
-        background: rgba(255, 255, 255, 0.1);
-        color: #ffffff;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        padding: 0.75rem 1.5rem;
+    .btn-home {
+        background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+        color: white !important;
+        padding: 0.85rem 1.75rem;
         border-radius: 1rem;
-        font-weight: 700;
-        font-size: 0.9rem;
+        font-weight: 800;
+        font-family: 'Outfit', sans-serif;
+        font-size: 1rem;
         text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.75rem;
+        box-shadow: 0 10px 20px -5px rgba(139, 92, 246, 0.5);
+        border: 2px solid rgba(255, 255, 255, 0.15);
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        text-shadow: 0 2px 4px rgba(0,0,0,0.2);
         white-space: nowrap;
-        backdrop-filter: blur(10px);
     }
 
-    .bdi-back-btn:hover {
-        background: rgba(255, 255, 255, 0.2);
-        transform: translateY(-2px);
-        box-shadow: 0 8px 24px rgba(0,0,0,0.3);
-        border-color: rgba(255,255,255,0.3);
+    .btn-home:hover {
+        transform: translateY(-3px) scale(1.02);
+        box-shadow: 0 20px 30px -8px rgba(139, 92, 246, 0.6);
+        border-color: rgba(255, 255, 255, 0.4);
+        background: linear-gradient(135deg, #a78bfa 0%, #7c3aed 100%);
     }
 
     /* ===== ACCORDION GROUPS ===== */

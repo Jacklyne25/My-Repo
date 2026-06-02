@@ -22,3 +22,13 @@ Thumbs.db
 *.docx
 *.zip
 *.png
+
+# Local development and tunnel utilities
+TUNNEL_URL.txt
+tunnel.log
+test.txt
+cleanup_messages.py
+keep_tunnel_alive.ps1
+tmp_clean_port.ps1
+start_tunnel_stable.bat
+

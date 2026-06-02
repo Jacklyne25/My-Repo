@@ -1,13 +1,10 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Department Timetable{% endblock %}
 
 {% block content %}
 <style>
-    body {
-        background: #e0f2fe !important; /* Sky Blue */
-    }
-
     .grid-paper {
         background: rgba(255, 255, 255, 0.95);
         border-radius: 12px;
@@ -113,6 +110,51 @@
         text-overflow: ellipsis;
     }
 
+    /* Hold and Drag Styles */
+    .grid-cell.drag-over {
+        background: #f0f9ff !important;
+        box-shadow: inset 0 0 0 2px #3b82f6 !important;
+    }
+    .schedule-entry.dragging {
+        opacity: 0.5;
+        transform: scale(0.95);
+        border: 2px dashed #3b82f6 !important;
+    }
+    .schedule-entry {
+        cursor: grab;
+    }
+    .schedule-entry:active {
+        cursor: grabbing;
+    }
+
+    /* Toast Notifications */
+    .toast-container {
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        z-index: 2000;
+    }
+    .toast {
+        padding: 0.8rem 1.25rem;
+        border-radius: 0.75rem;
+        background: white;
+        color: #1e293b;
+        font-weight: 600;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        border-left: 5px solid #3b82f6;
+        animation: slideIn 0.3s ease-out;
+        font-size: 0.85rem;
+    }
+    .toast.success { border-left-color: #10b981; }
+    .toast.error { border-left-color: #ef4444; }
+    @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+
     .delete-overlay {
         opacity: 0;
         position: absolute;
@@ -152,10 +194,7 @@
     }
 </style>
 
-<!-- Spacer for fixed navbar -->
-<div style="height: 90px;"></div>
-
-<div class="container-fluid px-4 no-print">
+<div class="no-print">
     <div style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
         <div style="display: flex; gap: 0.75rem;">
             <a href="{% url 'scheduling:conflict_review' %}" class="btn btn-outline-secondary">
@@ -193,14 +232,25 @@
 
 <div class="grid-paper">
     <div class="grid-header">
-        <div>
+        <div style="flex: 1;">
             <div class="univ-name">{{ request.user.department.faculty.name|default:"DSAMS UNIVERSITY" }}</div>
             <p style="color: var(--text-muted); margin-bottom: 0.5rem;">
                 Official Timetable for <strong>{{ params.get_semester_display }} ({{ params.get_cohort_display }}) {{ params.academic_year }}</strong>
             </p>
             <div style="font-size: 0.9rem; color: #64748b; margin-top: 0.35rem;">Department: {{ request.user.department }}</div>
         </div>
-        <div style="text-align: right; color: #94a3b8; font-size: 0.75rem;">Generated on: {% now "F j, Y" %}</div>
+        
+        <!-- Rule Compliance Card (Moved from HOD Dashboard) -->
+        <div class="no-print" style="flex-shrink: 0; min-width: 200px; padding: 1rem; background: {% if timetable_compliance < 100 %}#fff1f2{% else %}#f0fdf4{% endif %}; border: 1px solid {% if timetable_compliance < 100 %}#fecaca{% else %}#bbf7d0{% endif %}; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-left: 2rem; display: flex; flex-direction: column; justify-content: center;">
+            <div style="font-size: 0.7rem; color: {% if timetable_compliance < 100 %}#991b1b{% else %}#166534{% endif %}; font-weight: 700; text-transform: uppercase; margin-bottom: 0.35rem;">Rule Compliance</div>
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
+                <span style="font-size: 1.5rem; font-weight: 800; color: {% if timetable_compliance < 100 %}#ef4444{% else %}#22c55e{% endif %};">{{ timetable_compliance }}%</span>
+                <span style="font-size: 1.2rem;">⚖️</span>
+            </div>
+            <div style="font-size: 0.65rem; color: var(--text-muted); margin-top: 0.35rem;">Sessions per unit (Goal: 2)</div>
+        </div>
+
+        <div style="text-align: right; color: #94a3b8; font-size: 0.75rem; margin-left: 2rem;">Generated on: {% now "F j, Y" %}</div>
     </div>
 
     <div class="no-print" style="margin-bottom: 2rem; background: #f8fafc; padding: 1.5rem; border-radius: 12px; border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 1.5rem;">
@@ -209,7 +259,7 @@
         </div>
         <form method="get" action="" style="display: flex; gap: 1rem; align-items: center; margin: 0; flex-grow: 1;">
             <select name="group" class="form-select" style="max-width: 400px; padding: 0.75rem 1rem; border-radius: 8px; font-weight: 600;" onchange="this.form.submit()">
-                <option value="">Entire Department (All Programs & Classes)</option>
+                <option value="">Entire Department (All Programs &amp; Classes)</option>
                 <optgroup label="Class Groups">
                     {% for group in course_groups %}
                     <option value="{{ group.pk }}" {% if selected_group_id == group.pk|stringformat:"s" %}selected{% endif %}>
@@ -238,10 +288,19 @@
             <tr>
                 <td class="time-col">{{ row.time }}</td>
                 {% for slot in row.slots %}
-                <td>
+                <td class="grid-cell" 
+                    data-day="{{ slot.day }}" 
+                    data-slot="{{ row.time|slice:':5' }}-{{ row.time|slice:'-5:' }}"
+                    ondragover="allowDrop(event)"
+                    ondrop="handleDrop(event)">
                     <div style="display: flex; flex-direction: column; gap: 0.5rem;">
                         {% for entry in slot.entries %}
-                        <div class="schedule-entry" style="{% if entry.teaching_mode == 'ONLINE' %}background: #f0fdf4; border-left-color: #22c55e;{% endif %}">
+                        <div class="schedule-entry" 
+                             id="entry-{{ entry.pk }}"
+                             draggable="true"
+                             ondragstart="handleDragStart(event)"
+                             data-pk="{{ entry.pk }}"
+                             style="{% if entry.teaching_mode == 'ONLINE' %}background: #f0fdf4; border-left-color: #22c55e;{% endif %}">
                             <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem;">
                                 <div class="entry-code">{{ entry.course_unit.code }}</div>
                                 {% if not selected_group_id %}
@@ -284,4 +343,85 @@
 <div class="no-print" style="margin-top: 3rem; text-align: center; color: var(--text-muted); font-size: 0.9rem;">
     <p>All times shown in 24-hour format. Grid updates automatically when manual changes are saved.</p>
 </div>
+<script>
+    const CSRF = "{{ csrf_token }}";
+
+    function showToast(message, type = "info") {
+        const container = document.getElementById("toast-container");
+        if (!container) return;
+        const toast = document.createElement("div");
+        toast.className = `toast ${type}`;
+        toast.innerText = message;
+        container.appendChild(toast);
+        setTimeout(() => {
+            toast.style.opacity = "0";
+            setTimeout(() => toast.remove(), 300);
+        }, 4000);
+    }
+
+    function handleDragStart(ev) {
+        window.getSelection().removeAllRanges();
+        const entryId = ev.currentTarget.dataset.pk;
+        ev.dataTransfer.setData("entryId", entryId);
+        ev.dataTransfer.effectAllowed = "move";
+        ev.currentTarget.classList.add("dragging");
+    }
+
+    function allowDrop(ev) {
+        ev.preventDefault();
+        ev.currentTarget.classList.add("drag-over");
+    }
+
+    document.addEventListener("dragleave", (ev) => {
+        if (ev.target.classList.contains("grid-cell")) {
+            ev.target.classList.remove("drag-over");
+        }
+    });
+
+    function handleDrop(ev) {
+        ev.preventDefault();
+        const cell = ev.currentTarget;
+        cell.classList.remove("drag-over");
+        
+        const entryId = ev.dataTransfer.getData("entryId");
+        if (!entryId) return;
+
+        const entryEl = document.getElementById("entry-" + entryId);
+        if (entryEl) entryEl.classList.remove("dragging");
+
+        const newDay = cell.dataset.day;
+        const newSlot = cell.dataset.slot;
+        const newTime = newSlot.split("-")[0];
+
+        const updateUrl = "{% url 'academic:update_timetable_entry' 0 %}".replace("0", entryId);
+        const formData = new FormData();
+        formData.append("day", newDay);
+        formData.append("start_time", newTime);
+
+        fetch(updateUrl, {
+            method: "POST",
+            headers: { "X-CSRFToken": CSRF },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                let targetDiv = cell.querySelector("div");
+                if (!targetDiv) {
+                    cell.innerHTML = "<div style='display: flex; flex-direction: column; gap: 0.5rem;'></div>";
+                    targetDiv = cell.querySelector("div");
+                }
+                targetDiv.appendChild(entryEl);
+                showToast(data.message, "success");
+            } else {
+                showToast(data.message || "Rescheduling failed", "error");
+            }
+        })
+        .catch(err => {
+            showToast("Unable to connect to server", "error");
+        });
+    }
+</script>
+
+<div id="toast-container" class="toast-container"></div>
 {% endblock %}

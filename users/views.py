@@ -185,6 +185,12 @@ class HODDashboardView(RoleRequiredMixin, View):
             context['pending_attendance'] = attendance_sessions.filter(
                 status=LectureSession.Status.SCHEDULED
             ).count()
+            context['pending_verification'] = attendance_sessions.filter(
+                status=LectureSession.Status.PENDING_VERIFICATION
+            ).count()
+            context['auto_confirmed_today'] = attendance_sessions.filter(
+                status=LectureSession.Status.AUTO_CONFIRMED
+            ).count()
 
             # Calculate average attendance rate
             total_students_present = AttendanceRecord.objects.filter(
@@ -208,15 +214,69 @@ class HODDashboardView(RoleRequiredMixin, View):
                 user=request.user, is_read=False
             ).order_by('-created_at')[:5]
 
-            # Monitoring Metrics
-            past_sessions = LectureSession.objects.filter(
-                date__lt=today,
-                timetable_entry__course_unit__programs__department=department
+            # Enhanced Monitoring Metrics (V3)
+            # Fetch all sessions associated with the active timetable
+            from scheduling.models import SchedulingParameters
+            active_params = SchedulingParameters.objects.filter(department=department, is_active=True).first()
+            if active_params:
+                all_sessions = LectureSession.objects.filter(
+                    timetable_entry__scheduling_params=active_params
+                )
+            else:
+                all_sessions = LectureSession.objects.filter(
+                    timetable_entry__course_unit__programs__department=department
+                )
+
+            total_sessions_count = all_sessions.count()
+            
+            # 1. Completed: Actually finished or officially verified
+            completed_qs = all_sessions.filter(
+                status__in=[
+                    LectureSession.Status.CONDUCTED, 
+                    LectureSession.Status.SUBMITTED, 
+                    LectureSession.Status.APPROVED,
+                    LectureSession.Status.AUTO_CONFIRMED
+                ]
             )
-            context['missed_sessions_count'] = past_sessions.filter(status=LectureSession.Status.SCHEDULED).count()
-            context['conducted_sessions_total'] = past_sessions.filter(status__in=[LectureSession.Status.CONDUCTED, LectureSession.Status.SUBMITTED, LectureSession.Status.APPROVED]).count()
-            total_past = past_sessions.count()
-            context['completion_rate'] = round((context['conducted_sessions_total'] / total_past * 100), 1) if total_past > 0 else 100
+            context['conducted_sessions_total'] = completed_qs.count()
+            
+            # 2. Missed: Past sessions that are still in 'Scheduled' state OR explicitly marked 'MISSED'
+            missed_qs = all_sessions.filter(
+                Q(status=LectureSession.Status.MISSED) | 
+                Q(status=LectureSession.Status.SCHEDULED, date__lt=today)
+            )
+            context['missed_sessions_count'] = missed_qs.count()
+            
+            # 3. Scheduled (Future/Active): Upcoming sessions that are still in 'Scheduled' or 'In Progress' state
+            scheduled_qs = all_sessions.filter(
+                status__in=[LectureSession.Status.SCHEDULED, LectureSession.Status.IN_PROGRESS],
+                date__gte=today
+            )
+            context['upcoming_scheduled_count'] = scheduled_qs.count()
+            
+            # Percentages calculation
+            if total_sessions_count > 0:
+                context['completed_perc'] = round((context['conducted_sessions_total'] / total_sessions_count * 100), 1)
+                context['missed_perc'] = round((context['missed_sessions_count'] / total_sessions_count * 100), 1)
+                context['scheduled_perc'] = round((context['upcoming_scheduled_count'] / total_sessions_count * 100), 1)
+            else:
+                context['completed_perc'] = 0
+                context['missed_perc'] = 0
+                context['scheduled_perc'] = 100
+            
+            context['total_sessions_count'] = total_sessions_count
+            context['auto_confirmed_total'] = completed_qs.filter(status=LectureSession.Status.AUTO_CONFIRMED).count()
+            
+            # Legacy mapping for compatibility
+            context['completion_rate'] = context['completed_perc']
+            
+            # Additional contextual data
+            context['overridden_sessions'] = all_sessions.filter(
+                status=LectureSession.Status.AUTO_CONFIRMED
+            ).select_related('timetable_entry__course_unit', 'timetable_entry__lecturer').order_by('-date')[:5]
+
+            # Legacy mapping for compatibility
+            context['completion_rate'] = context['completed_perc']
             
         return render(request, 'users/hod_dashboard.html', context)
 

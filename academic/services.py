@@ -682,3 +682,72 @@ class BulkImportService:
             results['errors'].append(f"File error: {str(e)}")
             
         return results
+
+    @staticmethod
+    def import_elective_enrollments(file_obj, department):
+        """
+        Imports student-elective registrations from CSV/Excel.
+        Columns: Registration No, Course Code, Academic Year, Semester
+        """
+        from academic.models import ElectiveEnrollment
+        results = {'success': 0, 'failed': 0, 'errors': []}
+        
+        try:
+            data = BulkImportService._get_data_from_file(file_obj)
+            if not data:
+                results['errors'].append("The file is empty.")
+                return results
+
+            required = ['registration no', 'course code', 'academic year', 'semester']
+            if not all(col in data[0] for col in required):
+                results['errors'].append(f"Missing required columns: {', '.join(required)}")
+                return results
+
+            with transaction.atomic():
+                for i, row in enumerate(data):
+                    row_num = i + 2
+                    reg_no = row.get('registration no', '').strip()
+                    course_code = row.get('course code', '').strip()
+                    acad_year = row.get('academic year', '').strip()
+                    sem_str = row.get('semester', '').strip()
+
+                    if not all([reg_no, course_code, acad_year, sem_str]):
+                        results['failed'] += 1
+                        results['errors'].append(f"Row {row_num}: Missing required data")
+                        continue
+
+                    try:
+                        student = User.objects.get(registration_no=reg_no, role=User.Role.STUDENT)
+                        course_unit = CourseUnit.objects.get(code=course_code, course_category=CourseUnit.CourseCategory.ELECTIVE)
+                        semester = int(sem_str)
+
+                        # Check if course belongs to HOD's department (via programs)
+                        if not course_unit.programs.filter(department=department).exists():
+                            results['failed'] += 1
+                            results['errors'].append(f"Row {row_num}: Course {course_code} does not belong to your department.")
+                            continue
+
+                        ElectiveEnrollment.objects.update_or_create(
+                            student=student,
+                            course_unit=course_unit,
+                            academic_year=acad_year,
+                            semester=semester
+                        )
+                        results['success'] += 1
+                    except User.DoesNotExist:
+                        results['failed'] += 1
+                        results['errors'].append(f"Row {row_num}: Student with Reg No {reg_no} not found.")
+                    except CourseUnit.DoesNotExist:
+                        results['failed'] += 1
+                        results['errors'].append(f"Row {row_num}: Elective course {course_code} not found.")
+                    except ValueError:
+                        results['failed'] += 1
+                        results['errors'].append(f"Row {row_num}: Invalid semester value.")
+                    except Exception as e:
+                        results['failed'] += 1
+                        results['errors'].append(f"Row {row_num}: {str(e)}")
+
+        except Exception as e:
+            results['errors'].append(f"File error: {str(e)}")
+            
+        return results

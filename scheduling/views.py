@@ -280,12 +280,31 @@ class TimetableGridView(LoginRequiredMixin, HODOrSchedulerMixin, View):
         group_id = request.GET.get('group')
         grid, days = get_timetable_grid_data(params, group_id=group_id)
 
+        # Timetable Compliance Metric (2-sessions-per-week rule)
+        groups = CourseGroup.objects.filter(program__department=dept, is_active=True)
+        total_unit_group_pairs = 0
+        compliant_pairs = 0
+        
+        for group in groups:
+            for unit in group.course_units.filter(is_active=True):
+                total_unit_group_pairs += 1
+                session_count = TimetableEntry.objects.filter(
+                    course_unit=unit,
+                    course_group=group,
+                    scheduling_params=params
+                ).count()
+                if session_count >= 2:
+                    compliant_pairs += 1
+        
+        timetable_compliance = round((compliant_pairs / total_unit_group_pairs * 100), 1) if total_unit_group_pairs > 0 else 100
+
         return render(request, self.template_name, {
             'grid': grid,
             'days': days,
             'params': params,
+            'timetable_compliance': timetable_compliance,
             'is_historical': pk is not None and not params.is_active,
-            'course_groups': CourseGroup.objects.filter(program__department=dept, is_active=True),
+            'course_groups': groups,
             'selected_group_id': group_id
         })
 
@@ -321,6 +340,26 @@ class PublishTimetableView(LoginRequiredMixin, HODOrSchedulerMixin, View):
         if not params:
             messages.error(request, "No active scheduling parameters found.")
             return redirect('scheduling:dashboard')
+        
+        # Pre-publishing Rule Validation (2-sessions-per-week)
+        from academic.models import CourseGroup
+        groups = CourseGroup.objects.filter(program__department=dept, is_active=True)
+        compliance_errors = []
+        
+        for group in groups:
+            for unit in group.course_units.filter(is_active=True):
+                session_count = TimetableEntry.objects.filter(
+                    course_unit=unit,
+                    course_group=group,
+                    scheduling_params=params
+                ).count()
+                if session_count < 2:
+                    compliance_errors.append(f"{unit.code} for {group.name} (Has {session_count}/2)")
+
+        if compliance_errors:
+            messages.warning(request, f"Timetable published with {len(compliance_errors)} rule violations (missing sessions). Please review the Monitoring Dashboard.")
+            # We still allow publishing but with a loud warning. 
+            # Alternatively, we could block it, but flexibility is often needed in early stages.
         
         if not params.is_published:
             params.is_published = True

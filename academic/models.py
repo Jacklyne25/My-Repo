@@ -60,6 +60,15 @@ class CourseUnit(models.Model):
         related_name='courses_taught',
         limit_choices_to={'role': 'LECTURER'}
     )
+    assistant_coordinator = models.ForeignKey(
+        'users.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='coordinated_units',
+        limit_choices_to={'role': 'COORDINATOR'},
+        help_text="Course Unit Coordinator (Assistant Coordinator) for attendance management."
+    )
     is_active = models.BooleanField(default=True)
     weekly_hours = models.PositiveIntegerField(
         default=4,
@@ -75,13 +84,13 @@ class CourseUnit(models.Model):
 
     @property
     def completed_contact_hours(self):
-        """Calculates total hours from APPROVED lecture sessions."""
+        """Calculates total hours from CONDUCTED (and APPROVED/AUTO_CONFIRMED for legacy support) lecture sessions."""
         from scheduling.models import LectureSession
         from django.db.models import Sum
         # Sessions use actual_duration as per system rules
         total_hours = LectureSession.objects.filter(
             timetable_entry__course_unit=self,
-            status=LectureSession.Status.APPROVED
+            status__in=[LectureSession.Status.CONDUCTED, LectureSession.Status.APPROVED, LectureSession.Status.AUTO_CONFIRMED]
         ).aggregate(total=Sum('actual_duration'))['total'] or 0
         return total_hours
 
@@ -103,3 +112,21 @@ class CourseGroup(models.Model):
 
     def __str__(self):
         return f"{self.name} - {self.program.code}"
+
+class ElectiveEnrollment(models.Model):
+    """
+    Tracks which students are enrolled in which specific elective course unit.
+    Used for elective-specific attendance and accurate room capacity calculation.
+    """
+    student = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='elective_enrollments', limit_choices_to={'role': 'STUDENT'})
+    course_unit = models.ForeignKey(CourseUnit, on_delete=models.CASCADE, related_name='enrollments', limit_choices_to={'course_category': 'ELECTIVE'})
+    academic_year = models.CharField(max_length=20, help_text="e.g. 2023/2024")
+    semester = models.PositiveIntegerField(choices=[(1, "1"), (2, "2")])
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('student', 'course_unit', 'academic_year', 'semester')
+        verbose_name_plural = "Elective Enrollments"
+
+    def __str__(self):
+        return f"{self.student.registration_no or self.student.username} - {self.course_unit.code}"

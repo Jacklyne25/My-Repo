@@ -8,7 +8,8 @@
     body {
         margin: 0;
         padding: 0;
-        background-color: #0f172a;
+        background-color: var(--bg-main);
+        color: var(--text-dark);
         overflow-x: hidden;
     }
 
@@ -41,7 +42,7 @@
         left: 0;
         width: 100%;
         height: 100%;
-        background: linear-gradient(135deg, rgba(15, 23, 42, 0.4) 0%, rgba(15, 23, 42, 0.1) 100%);
+        background: var(--bg-overlay);
         z-index: -1;
     }
 
@@ -65,10 +66,10 @@
     }
 
     .glass-card {
-        background: #358ce3;
+        background: var(--glass-bg);
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
-        border: 1px solid rgba(253, 250, 250, 0.1);
+        border: 1px solid var(--border);
         border-radius: 1.5rem;
         padding: 3rem;
         width: 100%;
@@ -111,14 +112,11 @@
         font-size: 2rem;
         font-weight: 800;
         margin-bottom: 0.5rem;
-        background: linear-gradient(135deg, #fff 0%, #94a3b8 100%);
-        -webkit-background-clip: text;
-        background-clip: text;
-        -webkit-text-fill-color: transparent;
+        color: var(--primary);
     }
 
     .login-header p {
-        color: #f8f8f9;
+        color: var(--text-muted);
         font-size: 0.875rem;
     }
 
@@ -132,7 +130,7 @@
         margin-bottom: 0.5rem;
         font-size: 0.875rem;
         font-weight: 500;
-        color: #eff3f7;
+        color: var(--text-dark);
         transition: color 0.3s;
     }
 
@@ -143,10 +141,10 @@
     .form-input {
         width: 100%;
         padding: 0.75rem 1rem;
-        background: rgba(15, 23, 42, 0.6);
+        background: var(--bg-white);
         border: 1px solid var(--border);
         border-radius: 0.75rem;
-        color: var(--text);
+        color: var(--text-dark);
         font-size: 1rem;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         box-sizing: border-box;
@@ -155,8 +153,8 @@
     .form-input:focus {
         outline: none;
         border-color: var(--primary);
-        background: rgba(245, 246, 249, 0.8);
-        box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.2);
+        background: var(--bg-soft);
+        box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
         transform: translateY(-1px);
     }
 
@@ -181,13 +179,13 @@
     }
 
     .password-toggle:hover {
-        color: var(--text);
+        color: var(--text-dark);
     }
 
     .btn-submit {
         width: 100%;
         padding: 0.875rem;
-        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+        background: var(--primary);
         border: none;
         border-radius: 0.75rem;
         color: white;
@@ -240,8 +238,6 @@
     }
 </style>
 
-
-
 <div class="bg-layer layer-1"></div>
 <div class="bg-layer layer-2"></div>
 <div class="bg-overlay"></div>
@@ -292,20 +288,19 @@
         </form>
 
         <div style="margin-top: 1.5rem; text-align: center;">
-            <p style="color: #030000; font-size: 1.0rem;">
+            <p style="color: var(--text-dark); font-size: 1.0rem;">
                 New user? <a href="{% url 'users:activate_account' %}"
-                    style="color: #fefdff; text-decoration: none; font-weight: 600;">Activate your account</a>
+                    style="color: var(--primary); text-decoration: none; font-weight: 600;">Activate your account</a>
             </p>
-            <p style="color: #030000; font-size: 1.0rem; margin-top: 10px;">
+            <p style="color: var(--text-dark); font-size: 1.0rem; margin-top: 10px;">
                 Forgot password? <a href="{% url 'password_reset' %}"
-                    style="color: #fefdff; text-decoration: none; font-weight: 600;">Reset it here</a>
+                    style="color: var(--primary); text-decoration: none; font-weight: 600;">Reset it here</a>
             </p>
         </div>
     </div>
 </div>
 
 <script>
-
 
     // UI Interactions
     document.addEventListener('DOMContentLoaded', () => {

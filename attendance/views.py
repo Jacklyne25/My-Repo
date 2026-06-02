@@ -11,6 +11,7 @@ from .models import AttendanceRecord
 from users.models import User
 from academic.models import CourseUnit
 from core.services import AlertService
+from core.models import Alert, SessionAuditLog
 from datetime import datetime, timedelta
 
 class LecturerRequiredMixin(UserPassesTestMixin):
@@ -76,21 +77,50 @@ class CaptureAttendanceView(LoginRequiredMixin, View):
         session = get_object_or_404(LectureSession, pk=pk)
         
         # Lockout for coordinators after submission/approval
-        if request.user.role == User.Role.COORDINATOR and session.status in [LectureSession.Status.SUBMITTED, LectureSession.Status.APPROVED]:
-            messages.warning(request, "This session has already been submitted for evaluation and cannot be modified.")
-            return redirect('attendance:session_list')
+        if request.user.role == User.Role.COORDINATOR:
+             if session.status in [LectureSession.Status.CONDUCTED, LectureSession.Status.SUBMITTED, LectureSession.Status.APPROVED, LectureSession.Status.AUTO_CONFIRMED]:
+                 messages.warning(request, "This session has already been finalized and cannot be modified.")
+                 return redirect('attendance:session_list')
+             
+             # NOTE: Phase 2 allows capture even if SCHEDULED, session will be PENDING_VERIFICATION
 
         # Check permissions
         if request.user.role == User.Role.LECTURER and session.timetable_entry.lecturer != request.user:
              messages.error(request, "You are not the assigned lecturer for this session.")
              return redirect('attendance:session_list')
         
-        # Get students in the program/group
         if request.user.role == User.Role.COORDINATOR:
+             is_class_coord = request.user.course_group == session.timetable_entry.course_group
+             is_unit_coord = session.timetable_entry.course_unit.assistant_coordinator == request.user
+             
+             if not (is_class_coord or is_unit_coord):
+                 messages.error(request, "You are not authorized to monitor this course unit.")
+                 return redirect('attendance:session_list')
+        
+        # Get students in the program/group
+        course_unit = session.timetable_entry.course_unit
+        if course_unit.course_category == CourseUnit.CourseCategory.ELECTIVE:
+            from academic.models import ElectiveEnrollment
+            enrolled_student_ids = ElectiveEnrollment.objects.filter(
+                course_unit=course_unit
+            ).values_list('student_id', flat=True)
+            students = User.objects.filter(pk__in=enrolled_student_ids, role=User.Role.STUDENT)
+        elif request.user.role == User.Role.COORDINATOR:
              students = User.objects.filter(role=User.Role.STUDENT, course_group=request.user.course_group)
         else:
-             students = User.objects.filter(role=User.Role.STUDENT, department=session.timetable_entry.course_unit.programs.first().department)
+             # Default to the primary program's group if one is uniquely identifiable or all dept students
+             # Best practice: use the group assigned to the entry
+             if session.timetable_entry.course_group:
+                 students = User.objects.filter(role=User.Role.STUDENT, course_group=session.timetable_entry.course_group)
+             else:
+                 students = User.objects.filter(role=User.Role.STUDENT, department=course_unit.programs.first().department)
         
+        # Mark as viewed if accessed by the assigned lecturer
+        if request.user.role == User.Role.LECTURER and session.timetable_entry.lecturer == request.user:
+            if not session.lecturer_has_viewed:
+                session.lecturer_has_viewed = True
+                session.save(update_fields=['lecturer_has_viewed'])
+
         existing_records = {r.student_id: r.is_present for r in session.attendance_records.all()}
         
         return render(request, self.template_name, {
@@ -102,10 +132,20 @@ class CaptureAttendanceView(LoginRequiredMixin, View):
     def post(self, request, pk):
         session = get_object_or_404(LectureSession, pk=pk)
         
-        # Lockout for coordinators
-        if request.user.role == User.Role.COORDINATOR and session.status in [LectureSession.Status.SUBMITTED, LectureSession.Status.APPROVED]:
-            messages.error(request, "This session is locked and cannot be updated.")
-            return redirect('attendance:session_list')
+        # Lockout and Permission Check for coordinators
+        if request.user.role == User.Role.COORDINATOR:
+             is_class_coord = request.user.course_group == session.timetable_entry.course_group
+             is_unit_coord = session.timetable_entry.course_unit.assistant_coordinator == request.user
+             
+             if not (is_class_coord or is_unit_coord):
+                 messages.error(request, "You are not authorized to monitor this course unit.")
+                 return redirect('attendance:session_list')
+
+             if session.status in [LectureSession.Status.CONDUCTED, LectureSession.Status.SUBMITTED, LectureSession.Status.APPROVED]:
+                 messages.error(request, "This session is locked and cannot be updated.")
+                 return redirect('attendance:session_list')
+             
+             # NOTE: Phase 2 allows capture even if SCHEDULED, session will be PENDING_VERIFICATION
 
         present_student_ids = request.POST.getlist('present_students')
         
@@ -113,10 +153,20 @@ class CaptureAttendanceView(LoginRequiredMixin, View):
         session.attendance_records.all().delete()
         
         # Create new records
-        if request.user.role == User.Role.COORDINATOR:
+        course_unit = session.timetable_entry.course_unit
+        if course_unit.course_category == CourseUnit.CourseCategory.ELECTIVE:
+            from academic.models import ElectiveEnrollment
+            enrolled_student_ids = ElectiveEnrollment.objects.filter(
+                course_unit=course_unit
+            ).values_list('student_id', flat=True)
+            students = User.objects.filter(pk__in=enrolled_student_ids, role=User.Role.STUDENT)
+        elif request.user.role == User.Role.COORDINATOR:
              students = User.objects.filter(role=User.Role.STUDENT, course_group=request.user.course_group)
         else:
-             students = User.objects.filter(role=User.Role.STUDENT, department=session.timetable_entry.course_unit.programs.first().department)
+             if session.timetable_entry.course_group:
+                 students = User.objects.filter(role=User.Role.STUDENT, course_group=session.timetable_entry.course_group)
+             else:
+                 students = User.objects.filter(role=User.Role.STUDENT, department=course_unit.programs.first().department)
         
         for student in students:
             is_present = str(student.id) in present_student_ids
@@ -126,33 +176,65 @@ class CaptureAttendanceView(LoginRequiredMixin, View):
                 is_present=is_present
             )
         
-        if request.user.role == User.Role.COORDINATOR:
-            session.status = LectureSession.Status.CONDUCTED
-            messages.success(request, "Attendance captured. Please submit for validation.")
-            # Notify lecturer
-            AlertService.notify_attendance_recorded(session, request.user)
-        else:
-            session.status = LectureSession.Status.CONDUCTED
-            messages.success(request, "Attendance recorded.")
-        
+        # New Flow: 
+        session.status = LectureSession.Status.PENDING_VERIFICATION
+        audit_action = "ATTENDANCE_CAPTURED"
+        audit_notes = f"Status set to {session.status} after digital capture."
+
         session.save()
+        
+        SessionAuditLog.objects.create(
+            session=session,
+            action=audit_action,
+            performed_by=request.user,
+            notes=audit_notes
+        )
+
+        AlertService.notify_attendance_recorded(session, request.user)
+        messages.success(request, f"Attendance for {session.timetable_entry.course_unit.code} updated.")
         return redirect('attendance:session_list')
 
 class SubmitValidationView(CoordinatorRequiredMixin, View):
     def post(self, request, pk):
         session = get_object_or_404(LectureSession, pk=pk)
+        now = timezone.now()
         
-        if session.status == LectureSession.Status.SUBMITTED:
+        # 1. State Validation
+        if session.status == LectureSession.Status.PENDING_VERIFICATION:
             messages.warning(request, "This attendance has already been submitted for verification.")
             return redirect('attendance:session_list')
-        elif session.status == LectureSession.Status.APPROVED:
-            messages.info(request, "This session has already been verified and approved.")
+        elif session.status in [LectureSession.Status.CONDUCTED, LectureSession.Status.APPROVED]:
+            messages.info(request, "This session has already been verified.")
             return redirect('attendance:session_list')
-        elif session.status != LectureSession.Status.CONDUCTED:
+        
+        has_attendance = session.attendance_records.exists() or bool(session.signed_sheet)
+        if not has_attendance:
             messages.error(request, "Attendance must be captured before it can be submitted for verification.")
             return redirect('attendance:session_list')
+
+        # 2. FRIDAY 00:00 DEADLINE CHECK
+        # Sessions must be submitted by Friday 00:00 of the week FOLLOWING the session
+        session_week_start = session.date - timedelta(days=session.date.weekday())
+        deadline = timezone.make_aware(datetime.combine(session_week_start + timedelta(days=11), datetime.min.time())) # Next Friday 00:00
+        
+        if now > deadline:
+            messages.error(request, f"Submission Failed: The weekly deadline for this session (Friday {deadline.date()}) has passed.")
+            return redirect('attendance:session_list')
+
+        # 3. TWICE-A-WEEK PER COURSE UNIT LIMIT
+        current_week_start = session.date - timedelta(days=session.date.weekday())
+        already_submitted_count = LectureSession.objects.filter(
+            timetable_entry__course_unit=session.timetable_entry.course_unit,
+            timetable_entry__course_group=session.timetable_entry.course_group,
+            date__range=[current_week_start, current_week_start + timedelta(days=6)],
+            status__in=[LectureSession.Status.PENDING_VERIFICATION, LectureSession.Status.CONDUCTED, LectureSession.Status.SUBMITTED, LectureSession.Status.APPROVED]
+        ).count()
+
+        if already_submitted_count >= 2:
+            messages.error(request, f"Limit Reached: Only 2 attendance submissions are allowed per Course Unit per week for this group.")
+            return redirect('attendance:session_list')
             
-        session.status = LectureSession.Status.SUBMITTED
+        session.status = LectureSession.Status.PENDING_VERIFICATION
         session.save()
         messages.success(request, "Attendance submitted for lecturer validation.")
         return redirect('attendance:session_list')
@@ -190,7 +272,14 @@ class StartAttendanceView(CoordinatorRequiredMixin, View):
          session = LectureSession.objects.create(
              timetable_entry=entry,
              date=today,
-             status=LectureSession.Status.SCHEDULED
+             status=LectureSession.Status.IN_PROGRESS
+         )
+         
+         SessionAuditLog.objects.create(
+            session=session,
+            action="SESSION_STARTED",
+            performed_by=request.user,
+            notes="Coordinator initiated the session."
          )
          
          messages.success(request, f"New session started for {entry.course_unit.code}.")
@@ -203,6 +292,11 @@ class ValidateAttendanceView(LecturerRequiredMixin, View):
         # Check permissions: Only the assigned lecturer or HOD can approve
         if request.user.role != User.Role.HOD and session.timetable_entry.lecturer != request.user:
              raise PermissionDenied
+        
+        # Rule: Teaching staff must view the record before verifying
+        if request.user.role == User.Role.LECTURER and not session.lecturer_has_viewed:
+             messages.error(request, f"Review Required: You must open and view the attendance list for {session.timetable_entry.course_unit.code} before you can verify it.")
+             return redirect('attendance:session_list')
 
         # Get actual duration from form
         try:
@@ -212,8 +306,23 @@ class ValidateAttendanceView(LecturerRequiredMixin, View):
             messages.error(request, "Invalid duration provided.")
             return redirect('attendance:session_list')
 
-        session.status = LectureSession.Status.APPROVED
+        session.status = LectureSession.Status.CONDUCTED
+        session.verified_by = request.user
+        session.verification_timestamp = timezone.now()
         session.save()
+
+        # Check for low attendance for all students in this session when approved/conducted
+        from core.rules import check_low_attendance
+        from attendance.models import AttendanceRecord
+        for record in AttendanceRecord.objects.filter(session=session):
+            check_low_attendance(record.student)
+
+        SessionAuditLog.objects.create(
+            session=session,
+            action="SESSION_APPROVED",
+            performed_by=request.user,
+            notes=f"Approved with duration {session.actual_duration}hrs."
+        )
         messages.success(request, f"Attendance session validated and approved ({session.actual_duration} hrs).")
         return redirect('attendance:session_list')
 
@@ -383,38 +492,70 @@ class CourseAttendanceSummaryView(LecturerRequiredMixin, View):
 
 
 class WeeklyAttendanceView(LoginRequiredMixin, View):
-    """View to manage attendance on a weekly basis."""
+    """Unified weekly attendance + verification view."""
     template_name = 'attendance/weekly_dashboard.html'
 
     def get(self, request):
-        if request.user.role == User.Role.LECTURER:
-            sessions = LectureSession.objects.filter(timetable_entry__lecturer=request.user)
-        elif request.user.role == User.Role.COORDINATOR:
-            program = request.user.course_group.program if request.user.course_group else None
-            if program:
-                sessions = LectureSession.objects.filter(timetable_entry__program=program)
-            else:
-                sessions = LectureSession.objects.none()
+        user = request.user
+        if user.role == User.Role.LECTURER:
+            sessions = LectureSession.objects.filter(timetable_entry__lecturer=user)
+        elif user.role == User.Role.COORDINATOR:
+            program = user.course_group.program if user.course_group else None
+            sessions = LectureSession.objects.filter(timetable_entry__program=program) if program else LectureSession.objects.none()
         else:
             sessions = LectureSession.objects.none()
 
         # Group by week and course unit
-        weekly_data = sessions.annotate(week=TruncWeek('date')).values(
-            'week', 'timetable_entry__course_unit__id', 'timetable_entry__course_unit__code', 'timetable_entry__course_unit__name'
+        weekly_qs = sessions.annotate(week=TruncWeek('date')).values(
+            'week',
+            'timetable_entry__course_unit__id',
+            'timetable_entry__course_unit__code',
+            'timetable_entry__course_unit__name',
         ).annotate(
             total_sessions=Count('id'),
             conducted_count=Count('id', filter=Q(status=LectureSession.Status.CONDUCTED)),
             submitted_count=Count('id', filter=Q(status=LectureSession.Status.SUBMITTED)),
             approved_count=Count('id', filter=Q(status=LectureSession.Status.APPROVED)),
+            pending_verification_count=Count('id', filter=Q(status=LectureSession.Status.PENDING_VERIFICATION)),
             missed_count=Count('id', filter=Q(status=LectureSession.Status.MISSED)),
         ).order_by('-week', 'timetable_entry__course_unit__code')
 
-        # To get the actual session objects for each week-course group (for detailed view)
-        # We'll pass the grouped data and the user can drill down.
-        
+        # Build a map of course_unit_id → groups_info (student lists)
+        course_groups_map = {}
+        if user.role == User.Role.LECTURER:
+            for entry in TimetableEntry.objects.filter(lecturer=user).select_related('program', 'course_group', 'course_unit').distinct():
+                cu_id = entry.course_unit_id
+                group = entry.course_group
+                program = entry.program
+                if not group or not program:
+                    continue
+                combo_key = (group.id, program.id)
+                if cu_id not in course_groups_map:
+                    course_groups_map[cu_id] = {}
+                if combo_key not in course_groups_map[cu_id]:
+                    students = User.objects.filter(
+                        role=User.Role.STUDENT,
+                        course_group=group,
+                        program=program,
+                    ).order_by('last_name', 'first_name')
+                    course_groups_map[cu_id][combo_key] = {
+                        'group': group,
+                        'program': program,
+                        'student_count': students.count(),
+                        'students': students,
+                    }
+
+        # Attach groups list to each weekly summary row
+        weekly_summary = []
+        for row in weekly_qs:
+            cu_id = row['timetable_entry__course_unit__id']
+            row['groups'] = list(course_groups_map.get(cu_id, {}).values())
+            weekly_summary.append(row)
+
         return render(request, self.template_name, {
-            'weekly_summary': weekly_data,
+            'weekly_summary': weekly_summary,
         })
+
 
 
 class UploadSignedSheetView(CoordinatorRequiredMixin, View):
@@ -422,18 +563,28 @@ class UploadSignedSheetView(CoordinatorRequiredMixin, View):
     def post(self, request, pk):
         session = get_object_or_404(LectureSession, pk=pk)
         
-        if session.status in [LectureSession.Status.SUBMITTED, LectureSession.Status.APPROVED]:
-            messages.error(request, "Cannot upload sheet for a submitted or approved session.")
+        if session.status in [LectureSession.Status.CONDUCTED, LectureSession.Status.SUBMITTED, LectureSession.Status.APPROVED]:
+            messages.error(request, "Cannot upload sheet for a conducted or approved session.")
             return redirect(request.META.get('HTTP_REFERER', 'attendance:session_list'))
 
         if 'signed_sheet' in request.FILES:
             session.signed_sheet = request.FILES['signed_sheet']
             session.recording_method = LectureSession.RecordingMethod.PAPER
-            # Automatically trigger CONDUCTED status if it was SCHEDULED
-            if session.status == LectureSession.Status.SCHEDULED:
-                session.status = LectureSession.Status.CONDUCTED
+            
+            session.status = LectureSession.Status.PENDING_VERIFICATION
+            audit_action = "SHEET_UPLOADED"
+            audit_notes = "Coordinator uploaded scanned sheet."
+            
             session.save()
-            messages.success(request, f"Signed sheet uploaded and session marked as CONDUCTED for {session.timetable_entry.course_unit.code}.")
+            
+            SessionAuditLog.objects.create(
+                session=session,
+                action=audit_action,
+                performed_by=request.user,
+                notes=audit_notes
+            )
+            
+            messages.success(request, f"Signed sheet uploaded for {session.timetable_entry.course_unit.code}.")
         else:
             messages.error(request, "No file uploaded.")
         return redirect(request.META.get('HTTP_REFERER', 'attendance:session_list'))
@@ -475,7 +626,7 @@ class LecturerReviewWeekView(LecturerRequiredMixin, View):
             timetable_entry__course_unit_id=course_id,
             timetable_entry__lecturer=request.user,
             date__range=[week_date, week_date + timedelta(days=6)]
-        ).filter(status=LectureSession.Status.SUBMITTED)
+        ).filter(status__in=[LectureSession.Status.PENDING_VERIFICATION, LectureSession.Status.SUBMITTED])
         
         count = sessions.count()
         for session in sessions:

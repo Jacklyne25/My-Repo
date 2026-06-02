@@ -146,11 +146,42 @@
         background: #f1f5f9;
         border-color: #cbd5e1;
     }
+    .btn-home {
+        background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+        color: white !important;
+        padding: 1rem 1.75rem;
+        border-radius: 1rem;
+        font-weight: 800;
+        font-family: 'Outfit', sans-serif;
+        font-size: 1.05rem;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.75rem;
+        box-shadow: 0 10px 20px -5px rgba(139, 92, 246, 0.5);
+        border: 2px solid rgba(255, 255, 255, 0.15);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .btn-home:hover {
+        transform: translateY(-3px) scale(1.02);
+        box-shadow: 0 20px 30px -8px rgba(139, 92, 246, 0.6);
+        border-color: rgba(255, 255, 255, 0.4);
+        background: linear-gradient(135deg, #a78bfa 0%, #7c3aed 100%);
+    }
 </style>
 
-<div class="page-heading">
-    <h2>Make an Announcement</h2>
-    <p>Broadcast a message to your target audience.</p>
+<div class="page-heading" style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 2.5rem;">
+    <div>
+        <h2>Make an Announcement</h2>
+        <p style="margin-bottom: 0;">Broadcast a message to your target audience.</p>
+    </div>
+    <div style="display: flex; align-items: center;">
+        <a href="{% url 'users:home' %}" class="btn-home">
+            <span style="font-size: 1.25rem;">🏠</span> Return to home
+        </a>
+    </div>
 </div>
 
 <div class="announcement-card">

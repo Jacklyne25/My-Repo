@@ -77,12 +77,6 @@
             </p>
         </div>
 
-        {% if messages %}
-        <div style="margin-bottom: 2rem;">
-            {% for message in messages %}
-            <div style="padding: 1rem; border-radius: 0.75rem; 
-                        {% if message.tags == 'error' %} background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #fca5a5;
-                        {% else %} background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); color: #bae6fd; {% endif %} 
                         font-size: 0.95rem; display: flex; align-items: center; gap: 0.75rem; font-weight: 500;">
                 {% if message.tags == 'error' %}<span>⚠️</span>{% else %}<span>ℹ️</span>{% endif %} {{ message }}
             </div>

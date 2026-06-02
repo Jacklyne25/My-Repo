@@ -93,7 +93,7 @@ class TimetableEntry(models.Model):
     course_group = models.ForeignKey('academic.CourseGroup', on_delete=models.CASCADE, null=True, blank=True)
     room = models.ForeignKey(Room, on_delete=models.CASCADE, null=True, blank=True)
     teaching_mode = models.CharField(max_length=15, choices=TeachingMode.choices, default=TeachingMode.PHYSICAL)
-    scheduling_params = models.ForeignKey(SchedulingParameters, on_delete=models.CASCADE, related_name='entries', null=True)
+    scheduling_params = models.ForeignKey(SchedulingParameters, on_delete=models.CASCADE, related_name='entries', null=True, blank=True)
     day_of_week = models.CharField(max_length=3, choices=DayOfWeek.choices)
     start_time = models.TimeField()
     end_time = models.TimeField()
@@ -120,9 +120,17 @@ class TimetableEntry(models.Model):
 
         # 3. Rule: Each course unit must have exactly two sessions per week PER GROUP
         # If we are adding a 3rd session for the same group, block it.
-        existing_sessions_count = TimetableEntry.objects.filter(course_unit=self.course_unit, course_group=self.course_group).exclude(pk=self.pk).count()
-        if existing_sessions_count >= 2:
+        # ALSO: Rule - Two sessions of the same unit cannot be on the same day
+        existing_sessions = TimetableEntry.objects.filter(
+            course_unit=self.course_unit, 
+            course_group=self.course_group
+        ).exclude(pk=self.pk)
+        
+        if existing_sessions.count() >= 2:
             raise ValidationError({'course_unit': "Each course unit is limited to exactly two sessions per week for a specific class group."})
+        
+        if existing_sessions.filter(day_of_week=self.day_of_week).exists():
+            raise ValidationError({'day_of_week': f"Each course unit can have only one session per day. A session for {self.course_unit.code} is already scheduled for this day."})
 
         # 4. Check for Room Conflicts
         if self.teaching_mode == self.TeachingMode.PHYSICAL:
@@ -167,12 +175,15 @@ class TimetableEntry(models.Model):
 class LectureSession(models.Model):
     class Status(models.TextChoices):
         SCHEDULED = 'SCHEDULED', 'Scheduled'
+        IN_PROGRESS = 'IN_PROGRESS', 'In Progress'
         CONDUCTED = 'CONDUCTED', 'Conducted'
-        SUBMITTED = 'SUBMITTED', 'Submitted'
+        SUBMITTED = 'SUBMITTED', 'Conducted & Attendance submitted'
+        PENDING_VERIFICATION = 'PENDING_VERIFICATION', 'Pending Verification'
         APPROVED = 'APPROVED', 'Approved'
+        AUTO_CONFIRMED = 'AUTO_CONFIRMED', 'Auto-Confirmed'
         MISSED = 'MISSED', 'Missed'
         RESCHEDULED = 'RESCHEDULED', 'Rescheduled'
-        LECTURER_CONFIRMED = 'LECTURER_CONFIRMED', 'Lecturer Confirmed'
+        LECTURER_CONFIRMED = 'LECTURER_CONFIRMED', 'Confirmed'
         CANCELLED = 'CANCELLED', 'Cancelled'
 
     class RecordingMethod(models.TextChoices):
@@ -188,8 +199,17 @@ class LectureSession(models.Model):
         default=RecordingMethod.DIGITAL
     )
     signed_sheet = models.FileField(upload_to='attendance_sheets/', null=True, blank=True)
+    lecturer_has_viewed = models.BooleanField(default=False, help_text="Has the lecturer opened the attendance list for review?")
     actual_duration = models.DecimalField(max_digits=4, decimal_places=2, default=2.00)
     verification_notes = models.TextField(blank=True, null=True)
+    verified_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='verified_sessions'
+    )
+    verification_timestamp = models.DateTimeField(null=True, blank=True)
 
     def mark_conducted(self):
         if self.status == self.Status.SCHEDULED:
@@ -197,13 +217,12 @@ class LectureSession(models.Model):
             self.save()
 
     def submit_attendance(self):
-        if self.status == self.Status.CONDUCTED:
-            self.status = self.Status.SUBMITTED
-            self.save()
+        self.status = self.Status.PENDING_VERIFICATION
+        self.save()
 
     def approve_attendance(self):
-        if self.status == self.Status.SUBMITTED:
-            self.status = self.Status.APPROVED
+        if self.status in [self.Status.PENDING_VERIFICATION, self.Status.SUBMITTED]:
+            self.status = self.Status.CONDUCTED
             self.save()
             # Check for low attendance for all students in this session when approved
             from core.rules import check_low_attendance

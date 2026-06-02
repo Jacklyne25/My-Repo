@@ -56,13 +56,43 @@
     <div class="card glass-card">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
         <div>
-            <h1 style="color: var(--primary); margin: 0;">Capture Attendance</h1>
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <h1 style="color: var(--primary); margin: 0; font-size: 1.75rem;">Capture Attendance</h1>
+                {% if session.status == 'SCHEDULED' %}
+                    <span style="background: #f1f5f9; color: #64748b; padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.75rem; font-weight: 700; border: 1px solid #e2e8f0;">
+                        SCHEDULED
+                    </span>
+                {% elif session.status == 'IN_PROGRESS' %}
+                    <span style="background: #e0f2fe; color: #0369a1; padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.75rem; font-weight: 700; border: 1px solid #bae6fd;">
+                        IN PROGRESS
+                    </span>
+                 {% elif session.status == 'PENDING_VERIFICATION' %}
+                    <span style="background: #fee2e2; color: #b91c1c; padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.75rem; font-weight: 700; border: 1px solid #fecaca;">
+                        PENDING VERIFICATION
+                    </span>
+                {% elif session.status == 'CONDUCTED' or session.status == 'LECTURER_CONFIRMED' %}
+                    <span style="background: #f0fdf4; color: #15803d; padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.75rem; font-weight: 700; border: 1px solid #bbf7d0;">
+                        CONFIRMED
+                    </span>
+                {% else %}
+                    <span style="background: #f3f4f6; color: #4b5563; padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.75rem; font-weight: 700;">
+                        {{ session.get_status_display }}
+                    </span>
+                {% endif %}
+            </div>
             <p style="color: var(--text-muted); margin: 0.5rem 0 0 0;">
                 {{ session.timetable_entry.course_unit.code }} - {{ session.date }}
             </p>
         </div>
-        <a href="{% url 'attendance:session_list' %}" class="btn"
-            style="background-color: var(--card-bg); border: 1px solid var(--border);">Cancel</a>
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            {% if session.status == 'PENDING_VERIFICATION' %}
+                <div style="background: #fffbeb; border: 1px solid #fef3c7; color: #92400e; padding: 0.5rem 1rem; border-radius: 0.5rem; font-size: 0.8rem; font-weight: 600;">
+                    ⚠️ Lecturer hasn't approved session yet. Data will be held for verification.
+                </div>
+            {% endif %}
+            <a href="{% url 'attendance:session_list' %}" class="btn"
+                style="background-color: var(--card-bg); border: 1px solid var(--border); padding: 0.5rem 1rem; font-size: 0.85rem; text-decoration: none; color: var(--text-muted);">Back</a>
+        </div>
     </div>
 
     <form method="post">

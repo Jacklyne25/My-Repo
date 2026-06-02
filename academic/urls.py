@@ -3,7 +3,7 @@ from .views import (
     ImportDataView, DownloadTemplateView, DepartmentTimetableView,
     FacultyAdminDashboardView, FacultyManagementView, DepartmentManagementView, ProgramManagementView,
     ProgramCreateView, ProgramUpdateView, ProgramDeleteView,
-    DepartmentCourseListView, AssignLecturerView, CourseUnitCreateView, CourseUnitUpdateView, CourseUnitDeleteView, CourseGroupListView, CourseGroupDeleteView,
+    DepartmentCourseListView, AssignLecturerView, AssignAssistantCoordinatorView, UpdateTimetableEntryView, CourseUnitCreateView, CourseUnitUpdateView, CourseUnitDeleteView, CourseGroupListView, CourseGroupDeleteView,
     CourseGroupCreateView, CourseGroupUpdateView, CourseGroupUnitAllocationView
 )
 
@@ -23,10 +23,12 @@ urlpatterns = [
     path('courses/<int:pk>/edit/', CourseUnitUpdateView.as_view(), name='edit_course'),
     path('courses/<int:pk>/delete/', CourseUnitDeleteView.as_view(), name='delete_course'),
     path('courses/<int:pk>/assign-lecturer/', AssignLecturerView.as_view(), name='assign_lecturer'),
+    path('courses/<int:pk>/assign-coordinator/', AssignAssistantCoordinatorView.as_view(), name='assign_assistant_coordinator'),
     
     path('import/', ImportDataView.as_view(), name='import_data'),
     path('import/template/<str:type>/', DownloadTemplateView.as_view(), name='download_template'),
     path('timetable/', DepartmentTimetableView.as_view(), name='department_timetable'),
+    path('timetable/update-entry/<int:pk>/', UpdateTimetableEntryView.as_view(), name='update_timetable_entry'),
     path('course-groups/', CourseGroupListView.as_view(), name='course_group_list'),
     path('course-groups/add/', CourseGroupCreateView.as_view(), name='add_course_group'),
     path('course-groups/<int:pk>/edit/', CourseGroupUpdateView.as_view(), name='edit_course_group'),

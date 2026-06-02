@@ -6,104 +6,229 @@
 {% block content %}
 <style>
     body {
-        background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url("{% static 'images/dsh.jpg' %}");
+        background-image: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url("{% static 'images/dsh.jpg' %}");
         background-size: cover;
         background-attachment: fixed;
         background-position: center;
     }
-    .dashboard-main-card {
-        background: var(--glass-bg, rgba(255, 255, 255, 0.9)) !important;
+    .main-card {
+        background: rgba(255,255,255,0.92);
         backdrop-filter: blur(12px);
+        border-radius: 1.5rem;
+        padding: 2rem;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.15);
     }
+    /* Week summary card */
+    .week-card {
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 1.25rem;
+        overflow: hidden;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    }
+    .week-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        padding: 1.25rem 1.5rem;
+        border-bottom: 1px solid #f1f5f9;
+        background: #f8fafc;
+    }
+    .week-course-title { font-size: 1.1rem; font-weight: 800; color: #1e3a8a; margin: 0; }
+    .week-label { font-size: 0.8rem; color: #94a3b8; margin: 0.2rem 0 0; }
+    .session-count-badge { font-size: 1.5rem; font-weight: 800; color: #4f46e5; }
+    /* Status chips */
+    .status-chips { display: flex; gap: 0.75rem; padding: 1rem 1.5rem; flex-wrap: wrap; }
+    .chip { display: flex; flex-direction: column; align-items: center; padding: 0.5rem 1rem; border-radius: 0.75rem; min-width: 80px; }
+    .chip small { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+    .chip span { font-size: 1.3rem; font-weight: 800; }
+    .chip-conducted { background: #eef2ff; color: #4f46e5; }
+    .chip-submitted { background: #fef3c7; color: #d97706; }
+    .chip-approved  { background: #dcfce7; color: #16a34a; }
+    .chip-missed    { background: #fee2e2; color: #dc2626; }
+    /* Action buttons row */
+    .action-row { display: flex; align-items: center; gap: 0.75rem; padding: 0 1.5rem 1rem; justify-content: flex-end; flex-wrap: wrap; }
+    /* Student list section */
+    .student-toggle-btn {
+        background: #4f46e5; color: white; border: none; padding: 0.45rem 1rem;
+        border-radius: 0.75rem; font-weight: 700; font-size: 0.8rem; cursor: pointer;
+        display: flex; align-items: center; gap: 0.4rem; transition: filter 0.2s;
+    }
+    .student-toggle-btn:hover { filter: brightness(1.15); }
+    .student-lists-panel {
+        display: none;
+        border-top: 1px dashed #e2e8f0;
+        padding: 1.25rem 1.5rem;
+        background: #f8fafc;
+    }
+    .groups-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+        gap: 1rem;
+        margin-top: 0.75rem;
+    }
+    .group-card {
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 1rem;
+        padding: 1rem;
+    }
+    .group-header { display: flex; justify-content: space-between; margin-bottom: 0.5rem; }
+    .prog-tag { font-size: 0.7rem; background: #e0f2fe; color: #0369a1; padding: 0.2rem 0.6rem; border-radius: 0.5rem; font-weight: 800; }
+    .stu-count { font-size: 0.7rem; color: #94a3b8; font-weight: 700; }
+    .group-name { font-weight: 700; font-size: 0.9rem; color: #334155; margin-bottom: 0.5rem; }
+    .student-table-wrap { max-height: 200px; overflow-y: auto; border: 1px solid #f1f5f9; border-radius: 0.5rem; display: none; margin-top: 0.5rem; }
+    .student-table-toggle { width: 100%; background: #f1f5f9; border: none; padding: 0.35rem; border-radius: 0.5rem; font-size: 0.75rem; font-weight: 700; color: #475569; cursor: pointer; transition: background 0.15s; }
+    .student-table-toggle:hover { background: #e2e8f0; }
+    .stu-table { width: 100%; font-size: 0.8rem; border-collapse: collapse; }
+    .stu-table th { background: #f8fafc; padding: 0.4rem 0.5rem; text-align: left; color: #64748b; font-size: 0.7rem; position: sticky; top: 0; }
+    .stu-table td { padding: 0.4rem 0.5rem; border-bottom: 1px solid #f1f5f9; }
+    .stu-table td:first-child { white-space: nowrap; font-family: monospace; }
+    .stu-table tr:last-child td { border-bottom: none; }
+    .btn { cursor: pointer; transition: all 0.2s; }
+    .btn:hover { transform: translateY(-1px); filter: brightness(1.08); }
 </style>
-<div class="card dashboard-main-card">
+
+<div class="main-card">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-        <h1 style="color: var(--primary); margin: 0;">Weekly Monitoring Dashboard</h1>
-        <div style="display: flex; gap: 1rem;">
-            <a href="{% url 'attendance:session_list' %}" class="btn" style="background-color: var(--card-bg); border: 1px solid var(--border);">Individual Sessions</a>
-            <a href="{% url 'users:home' %}" class="btn" style="background-color: var(--card-bg); border: 1px solid var(--border);">Back to Home</a>
+        <h1 style="color: #1e3a8a; margin: 0; font-size: 1.5rem; font-weight: 800;">📅 Weekly Monitoring &amp; Verification</h1>
+        <div style="display: flex; gap: 0.75rem;">
+            <a href="{% url 'attendance:session_list' %}" class="btn" style="padding: 0.5rem 1rem; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 0.75rem; font-size: 0.85rem; font-weight: 600; text-decoration: none; color: #475569;">Individual Sessions</a>
+            <a href="{% url 'users:home' %}" class="btn" style="padding: 0.5rem 1rem; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 0.75rem; font-size: 0.85rem; font-weight: 600; text-decoration: none; color: #475569;">← Home</a>
         </div>
     </div>
 
-    {% if messages %}
-    {% for message in messages %}
-    <div style="padding: 1rem; margin-bottom: 1.5rem; border-radius: 0.5rem; background: rgba(34, 197, 94, 0.1); border: 1px solid #22c55e; color: #86efac;">
-        {{ message }}
+    {% for summary in weekly_summary %}
+    <div class="week-card">
+        <!-- Header: Course info + week label -->
+        <div class="week-card-header">
+            <div>
+                <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.4rem;">
+                    <p class="week-label" style="margin: 0;">Week of {{ summary.week|date:"l, d M Y" }}</p>
+                    {% if summary.total_sessions < 2 %}
+                        <span style="font-size: 0.75rem; background: #fee2e2; color: #ef4444; padding: 0.2rem 0.6rem; border-radius: 0.5rem; font-weight: 800; border: 1px solid #fecaca; display: flex; align-items: center; gap: 0.3rem;">
+                            ⚠️ Rule Violation: Missing Required Session
+                        </span>
+                    {% else %}
+                        <span style="font-size: 0.75rem; background: #f0fdf4; color: #16a34a; padding: 0.2rem 0.6rem; border-radius: 0.5rem; font-weight: 800; border: 1px solid #bbf7d0; display: flex; align-items: center; gap: 0.3rem;">
+                            ✅ Compliant (2 Sessions)
+                        </span>
+                    {% endif %}
+                </div>
+                <h3 class="week-course-title">{{ summary.timetable_entry__course_unit__code }}: {{ summary.timetable_entry__course_unit__name }}</h3>
+            </div>
+            <div style="text-align: right;">
+                <span class="session-count-badge">{{ summary.total_sessions }}</span>
+                <p style="font-size: 0.7rem; color: #94a3b8; margin: 0;">sessions</p>
+            </div>
+        </div>
+
+        <!-- Status chips -->
+        <div class="status-chips">
+            <div class="chip chip-conducted">
+                <small>Conducted</small>
+                <span>{{ summary.conducted_count }}</span>
+            </div>
+            <div class="chip chip-submitted">
+                <small>Submitted</small>
+                <span>{{ summary.submitted_count }}</span>
+            </div>
+            <div class="chip chip-approved">
+                <small>Approved</small>
+                <span>{{ summary.approved_count }}</span>
+            </div>
+            {% if summary.missed_count > 0 %}
+            <div class="chip chip-missed">
+                <small>Missed</small>
+                <span>{{ summary.missed_count }}</span>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Action buttons -->
+        <div class="action-row">
+            {% if summary.groups %}
+            <button class="student-toggle-btn" onclick="togglePanel(this)">
+                📋 Verification Lists
+            </button>
+            {% endif %}
+
+            <a href="{% url 'attendance:week_detail' summary.week|date:'Y-m-d' summary.timetable_entry__course_unit__id %}" class="btn" style="padding: 0.45rem 1rem; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 0.75rem; font-size: 0.8rem; font-weight: 600; text-decoration: none; color: #475569;">
+                View Details
+            </a>
+
+            {% if user.role == 'LECTURER' and summary.submitted_count > 0 %}
+            <form action="{% url 'attendance:review_week' summary.week|date:'Y-m-d' summary.timetable_entry__course_unit__id %}" method="post" style="margin: 0;">
+                {% csrf_token %}
+                <button type="submit" class="btn" style="padding: 0.45rem 1rem; background: #4f46e5; color: white; border: none; border-radius: 0.75rem; font-size: 0.8rem; font-weight: 700; cursor: pointer;">
+                    ✅ Approve Week
+                </button>
+            </form>
+            {% endif %}
+
+            {% if user.role == 'COORDINATOR' %}
+                {% if summary.conducted_count > 0 %}
+                <span style="font-size: 0.8rem; color: #94a3b8; font-style: italic;">Awaiting lecturer review</span>
+                {% else %}
+                <a href="{% url 'attendance:session_list' %}" class="btn" style="padding: 0.45rem 1rem; background: #10b981; color: white; border-radius: 0.75rem; font-size: 0.8rem; font-weight: 700; text-decoration: none;">Record Sessions</a>
+                {% endif %}
+            {% endif %}
+        </div>
+
+        <!-- Collapsible student lists panel -->
+        {% if summary.groups %}
+        <div class="student-lists-panel">
+            <p style="font-size: 0.8rem; font-weight: 700; color: #059669; margin: 0 0 0.75rem;">📋 Student lists for attendance verification</p>
+            <div class="groups-grid">
+                {% for group_info in summary.groups %}
+                <div class="group-card">
+                    <div class="group-header">
+                        <span class="prog-tag">{{ group_info.program.code }}</span>
+                        <span class="stu-count">{{ group_info.student_count }} students</span>
+                    </div>
+                    <div class="group-name">{{ group_info.group.name }}</div>
+                    <button class="student-table-toggle" onclick="toggleGroupTable(this)">▼ Show Students</button>
+                    <div class="student-table-wrap">
+                        <table class="stu-table">
+                            <thead>
+                                <tr><th>Reg No</th><th>Full Name</th></tr>
+                            </thead>
+                            <tbody>
+                                {% for student in group_info.students %}
+                                <tr>
+                                    <td><code>{{ student.username }}</code></td>
+                                    <td>{{ student.get_full_name }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% empty %}
+    <div style="text-align: center; padding: 4rem; color: #94a3b8; font-style: italic;">
+        No attendance data found for the current academic period.
     </div>
     {% endfor %}
-    {% endif %}
-
-    <div class="grid" style="grid-template-columns: 1fr; gap: 2rem;">
-        {% for summary in weekly_summary %}
-        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 1rem; padding: 1.5rem;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 1rem;">
-                <div>
-                    <h3 style="margin: 0; color: var(--primary);">Week of {{ summary.week|date:"M d, Y" }}</h3>
-                    <p style="margin: 0.25rem 0 0; color: var(--text-muted);">
-                        <strong>{{ summary.timetable_entry__course_unit__code }}</strong>: {{ summary.timetable_entry__course_unit__name }}
-                    </p>
-                </div>
-                <div style="text-align: right;">
-                    <span style="display: block; font-size: 0.8rem; color: var(--text-muted);">Sessions This Week</span>
-                    <span style="font-size: 1.2rem; font-weight: bold;">{{ summary.total_sessions }}</span>
-                </div>
-            </div>
-
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
-                <div style="background: rgba(99, 102, 241, 0.1); padding: 0.75rem; border-radius: 0.5rem; text-align: center;">
-                    <small style="display: block; color: #818cf8; margin-bottom: 0.25rem;">Conducted</small>
-                    <span style="font-weight: bold;">{{ summary.conducted_count }}</span>
-                </div>
-                <div style="background: rgba(251, 191, 36, 0.1); padding: 0.75rem; border-radius: 0.5rem; text-align: center;">
-                    <small style="display: block; color: #fbbf24; margin-bottom: 0.25rem;">Submitted</small>
-                    <span style="font-weight: bold;">{{ summary.submitted_count }}</span>
-                </div>
-                <div style="background: rgba(34, 197, 94, 0.1); padding: 0.75rem; border-radius: 0.5rem; text-align: center;">
-                    <small style="display: block; color: #4ade80; margin-bottom: 0.25rem;">Approved</small>
-                    <span style="font-weight: bold;">{{ summary.approved_count }}</span>
-                </div>
-                {% if summary.missed_count > 0 %}
-                <div style="background: rgba(239, 68, 68, 0.1); padding: 0.75rem; border-radius: 0.5rem; text-align: center;">
-                    <small style="display: block; color: #f87171; margin-bottom: 0.25rem;">Missed</small>
-                    <span style="font-weight: bold;">{{ summary.missed_count }}</span>
-                </div>
-                {% endif %}
-            </div>
-
-            <div style="display: flex; justify-content: flex-end; gap: 1rem; align-items: center;">
-                <a href="{% url 'attendance:week_detail' summary.week|date:'Y-m-d' summary.timetable_entry__course_unit__id %}" class="btn" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border);">
-                    View Details & Verify
-                </a>
-
-                {% if user.role == 'LECTURER' and summary.submitted_count > 0 %}
-                <form action="{% url 'attendance:review_week' summary.week|date:'Y-m-d' summary.timetable_entry__course_unit__id %}" method="post">
-                    {% csrf_token %}
-                    <button type="submit" class="btn" style="background-color: var(--primary); color: #fff;">
-                        Review & Approve Week
-                    </button>
-                </form>
-                {% endif %}
-
-                {% if user.role == 'COORDINATOR' and summary.conducted_count > 0 %}
-                <span style="color: var(--text-muted); font-size: 0.9rem;">Wait for Teaching Staff review of submitted sessions.</span>
-                {% elif user.role == 'COORDINATOR' and summary.total_sessions > summary.conducted_count %}
-                <a href="{% url 'attendance:session_list' %}" class="btn" style="font-size: 0.9rem;">
-                    Record Sessions
-                </a>
-                {% endif %}
-            </div>
-        </div>
-        {% empty %}
-        <div style="padding: 3rem; text-align: center; color: var(--text-muted);">
-            No attendance data found for the current academic period.
-        </div>
-        {% endfor %}
-    </div>
 </div>
 
-<style>
-    .grid { display: grid; }
-    .btn { cursor: pointer; transition: all 0.2s; }
-    .btn:hover { transform: translateY(-1px); filter: brightness(1.1); }
-</style>
+<script>
+    function togglePanel(btn) {
+        const panel = btn.closest('.week-card').querySelector('.student-lists-panel');
+        const visible = panel.style.display === 'block';
+        panel.style.display = visible ? 'none' : 'block';
+        btn.textContent = visible ? '📋 Verification Lists' : '🔼 Hide Lists';
+    }
+    function toggleGroupTable(btn) {
+        const wrap = btn.nextElementSibling;
+        const visible = wrap.style.display === 'block';
+        wrap.style.display = visible ? 'none' : 'block';
+        btn.textContent = visible ? '▼ Show Students' : '▲ Hide Students';
+    }
+</script>
 {% endblock %}

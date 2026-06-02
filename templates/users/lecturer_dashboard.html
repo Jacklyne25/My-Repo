@@ -4,35 +4,41 @@
 {% block title %}Teaching Staff Dashboard{% endblock %}
 
 {% block content %}
-<div class="dashboard-container">
-    <!-- Header Summary Stats -->
-    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 2rem;">
-        <div class="card summary-card stats-courses">
-            <div class="stats-icon">📚</div>
-            <div>
-                <h3 class="card-title-label">Total Courses</h3>
-                <p class="stat-value" style="color: #0369a1;">{{ my_courses.count }}</p>
-            </div>
-        </div>
-        <div class="card summary-card stats-sessions">
-            <div class="stats-icon">⏰</div>
-            <div>
-                <h3 class="card-title-label">Today's Sessions</h3>
-                <p class="stat-value" style="color: #b45309;">{{ today_sessions|length }}</p>
-            </div>
-        </div>
-        <div class="card summary-card stats-verifications">
-            <div class="stats-icon">✅</div>
-            <div style="flex: 1;">
-                <h3 class="card-title-label">Weekly Verifications</h3>
-                <a href="{% url 'attendance:weekly_dashboard' %}" class="btn-colorful btn-green" style="width: 100%; text-align: center;">Open Weekly Board</a>
-            </div>
-        </div>
-    </div>
+<div class="dashboard-container dashboard-with-sidebar">
+    <!-- Left Navigation Sidebar -->
+    <aside class="left-nav-sidebar">
+        <h2 style="color: #334155; font-size: 1.4rem; font-weight: 800; margin-bottom: 2rem; border-bottom: 2px solid #cbd5e1; padding-bottom: 1rem;">
+            📚 DSAMS
+        </h2>
+        <h3 class="sidebar-title">Menu</h3>
+        <div class="sidebar-menu">
+            <a href="#" class="menu-item active">🏠 Dashboard</a>
+            <a href="{% url 'attendance:weekly_dashboard' %}" class="menu-item">✅ Verifications</a>
+            
+            <div class="menu-section">My Courses</div>
+            {% for course in my_courses %}
+                <a href="{% url 'attendance:course_summary' course.course_unit__id %}" class="menu-item">
+                    📖 <span class="course-code">{{ course.course_unit__code }}</span>
+                </a>
+            {% endfor %}
 
-    <!-- Main Dashboard Grid -->
-    <div class="main-grid-layout">
-        <!-- Mid-Section: Today's Schedule and Notifications -->
+            <div class="menu-section">Quick Actions</div>
+            <a href="{% url 'core:create_announcement' %}" class="menu-item">📢 Send Alert</a>
+        </div>
+
+        <!-- Logout pinned to bottom -->
+        <div class="sidebar-footer">
+            <form action="{% url 'logout' %}" method="post">
+                {% csrf_token %}
+                <button type="submit" class="menu-item logout-btn">🚪 Sign Out</button>
+            </form>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <div class="dashboard-main-content">
+
+        <!-- Today's Schedule -->
         <section class="card card-schedule section-column">
             <div class="section-header">
                 <h2 class="section-title" style="color: #4338ca;">Today's Schedule</h2>
@@ -57,22 +63,41 @@
                         </div>
                         <div style="display: flex; gap: 0.75rem; align-items: center;">
                             {% if item.session %}
-                                {% if item.session.status == 'SUBMITTED' %}
-                                    <form action="{% url 'attendance:validate_attendance' item.session.id %}" method="post" style="display: flex; gap: 0.5rem; align-items: center;">
-                                        {% csrf_token %}
-                                        <div class="duration-input-container">
-                                            <input type="number" name="actual_duration" step="0.5" value="2.0" class="duration-input" title="Actual Duration (hrs)">
-                                            <span style="font-size: 0.7rem; color: #64748b;">hrs</span>
-                                        </div>
-                                        <button type="submit" class="btn-colorful btn-orange btn-sm">Validate</button>
-                                    </form>
+                                {% if item.session.status == 'SUBMITTED' or item.session.status == 'PENDING_VERIFICATION' %}
+                                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                        <!-- View Link -->
+                                        <a href="{% url 'attendance:capture_attendance' item.session.id %}" class="btn-colorful btn-blue btn-sm" title="View Attendance List">
+                                            👁️ View
+                                        </a>
+
+                                        <form action="{% url 'attendance:validate_attendance' item.session.id %}" method="post" style="display: flex; gap: 0.4rem; align-items: center;">
+                                            {% csrf_token %}
+                                            <div class="duration-input-container">
+                                                {% if item.session.status == 'PENDING_VERIFICATION' %}
+                                                    <span class="pulse-warning" title="Teacher approval was skipped - verify immediately">⚠️</span>
+                                                {% endif %}
+                                                <input type="number" name="actual_duration" step="0.5" value="2.0" class="duration-input" title="Actual Duration (hrs)">
+                                                <span style="font-size: 0.7rem; color: #64748b;">hrs</span>
+                                            </div>
+                                            
+                                            {% if item.session.lecturer_has_viewed %}
+                                                <button type="submit" class="btn-colorful {% if item.session.status == 'PENDING_VERIFICATION' %}btn-red{% else %}btn-orange{% endif %} btn-sm">
+                                                    {% if item.session.status == 'PENDING_VERIFICATION' %}Review{% else %}Validate{% endif %}
+                                                </button>
+                                            {% else %}
+                                                <button type="button" class="btn-disabled btn-sm" title="Please 'View' the records first before validating.">
+                                                    🔒 Validate
+                                                </button>
+                                            {% endif %}
+                                        </form>
+                                    </div>
                                 {% elif item.session.status == 'SCHEDULED' or item.session.status == 'LECTURER_CONFIRMED' %}
                                     <div style="display: flex; gap: 0.5rem; align-items: center;">
                                         {% if item.can_interact %}
                                             {% if item.session.status == 'SCHEDULED' %}
                                             <form action="{% url 'attendance:confirm_session' item.session.id %}" method="post">
                                                 {% csrf_token %}
-                                                <button type="submit" class="btn-colorful btn-green btn-sm">Confirm</button>
+                                                <button type="submit" class="btn-colorful btn-green btn-sm">Approve Session</button>
                                             </form>
 
                                             <form action="{% url 'attendance:cancel_session' item.session.id %}" method="post" onsubmit="return confirm('Are you sure you want to cancel this session?')">
@@ -101,7 +126,7 @@
                                     </div>
                                 {% else %}
                                     <span class="status-pill status-{{ item.session.status|lower }}">
-                                        {% if item.session.status == 'LECTURER_CONFIRMED' %}✅{% elif item.session.status == 'CANCELLED' %}⭕{% elif item.session.status == 'MISSED' %}⚠️{% else %}✨{% endif %}
+                                        {% if item.session.status == 'LECTURER_CONFIRMED' %}✅{% elif item.session.status == 'CANCELLED' %}⭕{% elif item.session.status == 'MISSED' %}⚠️{% elif item.session.status == 'AUTO_CONFIRMED' %}🤖{% elif item.session.status == 'IN_PROGRESS' %}⏳{% else %}✨{% endif %}
                                         {{ item.session.get_status_display }}
                                     </span>
                                 {% endif %}
@@ -118,42 +143,7 @@
                 <div class="empty-state">No lectures scheduled for today.</div>
             {% endif %}
         </section>
-
-        <!-- Sidebar: Notifications and Quick Links -->
-        <aside class="sidebar-layout">
-            <section class="card card-notifications full-height">
-                <div class="section-header">
-                    <h2 class="section-title" style="color: #b45309;">🔔 Notifications</h2>
-                    <div class="header-actions">
-                        {% if alerts.count > 0 %}
-                        <form action="{% url 'core:mark_all_read' %}" method="post">
-                            {% csrf_token %}
-                            <input type="hidden" name="next" value="{{ request.path }}">
-                            <button type="submit" class="btn-icon-label" style="color: #ef4444;">🗑️ Clear</button>
-                        </form>
-                        {% endif %}
-                        <a href="{% url 'core:create_announcement' %}" class="btn-icon-label" style="color: #4f46e5;">📢 Send</a>
-                    </div>
-                </div>
-                {% if alerts %}
-                    <div class="items-list">
-                        {% for alert in alerts %}
-                        <div class="notification-item {% if forloop.last %}last{% endif %}">
-                            <div class="noti-header">
-                                <span class="noti-severity-{{ alert.severity|lower }}">{{ alert.get_severity_display }}</span>
-                                <span class="noti-time">{{ alert.created_at|timesince }} ago</span>
-                            </div>
-                            <p class="noti-msg">{{ alert.message }}</p>
-                        </div>
-                        {% endfor %}
-                    </div>
-                {% else %}
-                    <div class="empty-state-sm">No active notifications.</div>
-                {% endif %}
-            </section>
-        </aside>
-
-        <!-- Lower Section: Weekly Timetable and My Courses -->
+        <!-- Weekly Timetable -->
         <section class="card card-timetable">
             <h2 class="section-title" style="color: #047857; margin-bottom: 1.5rem;">Weekly Timetable</h2>
             <div class="table-container">
@@ -188,43 +178,140 @@
             </div>
         </section>
 
-        <aside class="sidebar-layout">
-            <section class="card card-courses full-height">
-                <h2 class="section-title" style="color: #0369a1; margin-bottom: 1.5rem;">My Courses</h2>
+        <!-- Notifications -->
+        <section class="card card-notifications">
+            <div class="section-header">
+                <h2 class="section-title" style="color: #b45309;">🔔 Notifications</h2>
+                <div class="header-actions">
+                    {% if alerts.count > 0 %}
+                    <form action="{% url 'core:mark_all_read' %}" method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.path }}">
+                        <button type="submit" class="btn-icon-label" style="color: #ef4444;">🗑️ Clear</button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+            {% if alerts %}
                 <div class="items-list">
-                    {% for course in my_courses %}
-                    <a href="{% url 'attendance:course_summary' course.course_unit__id %}" style="text-decoration: none; color: inherit;">
-                        <div class="course-pill">
-                            <div class="course-pill-header">
-                                <span class="course-pill-code">{{ course.course_unit__code }}</span>
-                                <span class="course-pill-action">View</span>
-                            </div>
-                            <div class="course-pill-name">{{ course.course_unit__name }}</div>
+                    {% for alert in alerts %}
+                    <div class="notification-item {% if forloop.last %}last{% endif %}">
+                        <div class="noti-header">
+                            <span class="noti-severity-{{ alert.severity|lower }}">{{ alert.get_severity_display }}</span>
+                            <span class="noti-time">{{ alert.created_at|timesince }} ago</span>
                         </div>
-                    </a>
+                        <p class="noti-msg">{{ alert.message }}</p>
+                    </div>
                     {% endfor %}
                 </div>
-            </section>
-        </aside>
-    </div>
-</div>
+            {% else %}
+                <div class="empty-state-sm">No active notifications.</div>
+            {% endif %}
+        </section>
+    </div> <!-- End dashboard-main-content -->
+</div> <!-- End dashboard-container -->
 
 <style>
+    /* Full-height fixed sidebar override */
+    /* Let only main content's container be pushed by the sidebar */
+    .main-content .container {
+        max-width: 100% !important;
+        padding-left: calc(260px + 2rem) !important;
+    }
     body {
         background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 50%, #3b82f6 100%);
         background-attachment: fixed;
     }
     .dashboard-container {
-        max-width: 1440px;
-        margin: 0 auto;
-        padding-top: 2rem;
+        max-width: 100%;
+        margin: 0;
+        padding-top: 1.5rem;
     }
-    .main-grid-layout {
-        display: grid;
-        grid-template-columns: 1fr 380px;
+    .dashboard-with-sidebar {
+        display: block;
+    }
+    .left-nav-sidebar {
+        background: #edeff2 !important;
+        border-right: 1px solid #d1d5db;
+        border-radius: 0;
+        padding: 1.5rem;
+        box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+        position: fixed;
+        top: 6.5rem;
+        bottom: 0;
+        left: 0;
+        width: 260px;
+        z-index: 1050;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+    }
+    .sidebar-menu { flex: 1; }
+    .sidebar-footer {
+        margin-top: auto;
+        padding-top: 1rem;
+        border-top: 1px solid #e2e8f0;
+    }
+    .sidebar-footer form { width: 100%; }
+    .logout-btn {
+        width: 100%;
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: #ef4444 !important;
+        font-size: 0.9rem;
+    }
+    .logout-btn:hover {
+        background: #fee2e2 !important;
+        color: #dc2626 !important;
+    }
+
+    .dashboard-main-content {
+        display: flex;
+        flex-direction: column;
         gap: 1.5rem;
-        align-items: start;
     }
+    /* Menu Styles */
+    .sidebar-title {
+        color: #475569;
+        font-size: 1rem;
+        font-weight: 700;
+        margin-bottom: 1.25rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #cbd5e1;
+    }
+    .sidebar-menu {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    .menu-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem 1rem;
+        color: #475569;
+        text-decoration: none;
+        font-weight: 600;
+        border-radius: 0.75rem;
+        transition: all 0.2s;
+        font-size: 0.9rem;
+    }
+    .menu-item:hover, .menu-item.active {
+        background: #e0f2fe;
+        color: #0369a1;
+    }
+    .menu-section {
+        margin-top: 1.5rem;
+        margin-bottom: 0.5rem;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #94a3b8;
+        font-weight: 700;
+        padding-left: 0.5rem;
+    }
+    .course-code { font-weight: 700; }
     .card {
         background: rgba(255, 255, 255, 0.9) !important;
         border: 1px solid rgba(255, 255, 255, 0.5);
@@ -335,12 +422,29 @@
         gap: 0.75rem;
     }
     .status-pill {
-        background: #dcfce7;
-        color: #15803d;
-        padding: 0.5rem 1rem;
+        padding: 0.4rem 0.8rem;
         border-radius: 2rem;
         font-weight: 700;
-        font-size: 0.8rem;
+        font-size: 0.75rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+    .status-confirmed { background: #dcfce7; color: #15803d; }
+    .status-in_progress { background: #e0f2fe; color: #0369a1; }
+    .status-pending_verification { background: #fee2e2; color: #b91c1c; border: 1px solid #f87171; }
+    .status-auto_confirmed { background: #f3f4f6; color: #374151; border: 1px dashed #9ca3af; }
+    .status-missed { background: #fef3c7; color: #92400e; }
+    .status-cancelled { background: #f1f5f9; color: #64748b; }
+    
+    .pulse-warning {
+        animation: pulse-red 2s infinite;
+        cursor: help;
+    }
+    @keyframes pulse-red {
+        0% { opacity: 1; }
+        50% { opacity: 0.4; }
+        100% { opacity: 1; }
     }
 
     /* Sidebar Notifications */
@@ -397,20 +501,6 @@
         font-weight: 700;
     }
 
-    /* Course Pill */
-    .course-pill {
-        background: white;
-        padding: 1.25rem;
-        border-radius: 1.25rem;
-        border: 1px solid #f1f5f9;
-        transition: all 0.2s;
-    }
-    .course-pill:hover { border-color: #0ea5e9; transform: scale(1.02); }
-    .course-pill-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem; }
-    .course-pill-code { font-weight: 800; font-size: 1rem; color: #0369a1; }
-    .course-pill-action { font-size: 0.7rem; background: #e0f2fe; color: #0369a1; padding: 0.2rem 0.6rem; border-radius: 0.5rem; font-weight: 700; }
-    .course-pill-name { font-size: 0.85rem; color: #64748b; }
-
     /* Helpers */
     .btn-colorful {
         padding: 0.6rem 1rem;
@@ -425,6 +515,17 @@
     .btn-orange { background: #f59e0b; color: white; }
     .btn-green { background: #10b981; color: white; }
     .btn-red { background: #ef4444; color: white; }
+    .btn-disabled {
+        background: #e2e8f0;
+        color: #94a3b8;
+        cursor: not-allowed;
+        padding: 0.6rem 1rem;
+        border-radius: 1rem;
+        font-weight: 700;
+        font-size: 0.85rem;
+        display: inline-block;
+        border: 1px solid #cbd5e1;
+    }
     .btn-colorful:hover { filter: brightness(1.1); transform: translateY(-2px); }
     
     .btn-icon-label {
@@ -488,9 +589,97 @@
     .duration-input:focus { outline: none; }
     
     .btn-sm { padding: 0.3rem 0.6rem; font-size: 0.75rem; }
+    .card-verification { border-left: 8px solid #059669; }
+    
+    .course-block {
+        margin-bottom: 2rem;
+        background: rgba(255, 255, 255, 0.5);
+        padding: 1.5rem;
+        border-radius: 1.25rem;
+        border: 1px solid #e2e8f0;
+    }
+    .course-block-title {
+        font-size: 1.1rem;
+        font-weight: 800;
+        color: #1e3a8a;
+        margin-top: 0;
+        margin-bottom: 1.25rem;
+        border-bottom: 2px solid #e2e8f0;
+        padding-bottom: 0.5rem;
+    }
+    .groups-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 1.25rem;
+    }
+    .verification-group-card {
+        background: white;
+        padding: 1.25rem;
+        border-radius: 1rem;
+        border: 1px solid #f1f5f9;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+    .tag-program {
+        font-size: 0.7rem;
+        background: #e0f2fe;
+        color: #0369a1;
+        padding: 0.2rem 0.6rem;
+        border-radius: 0.5rem;
+        font-weight: 800;
+    }
+    .count-badge {
+        font-size: 0.7rem;
+        background: #f1f5f9;
+        color: #64748b;
+        padding: 0.2rem 0.6rem;
+        border-radius: 0.5rem;
+        font-weight: 700;
+    }
+    .group-title {
+        margin: 0;
+        font-size: 1rem;
+        color: #334155;
+        font-weight: 700;
+    }
+    .student-list-dropdown {
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px dashed #e2e8f0;
+    }
+    .list-scroll {
+        max-height: 250px;
+        overflow-y: auto;
+        border: 1px solid #f1f5f9;
+        border-radius: 0.5rem;
+    }
+    .simple-student-table {
+        width: 100%;
+        font-size: 0.85rem;
+        border-collapse: collapse;
+    }
+    .simple-student-table th {
+        background: #f8fafc;
+        padding: 0.5rem;
+        text-align: left;
+        position: sticky;
+        top: 0;
+        color: #64748b;
+        font-weight: 700;
+        font-size: 0.7rem;
+    }
+    .simple-student-table td {
+        padding: 0.5rem;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    .simple-student-table tr:last-child td { border-bottom: none; }
 </style>
 
 <script>
+    function toggleElement(id) {
+        const el = document.getElementById(id);
+        el.classList.toggle('hidden');
+    }
+
     function toggleReschedule(id) {
         const form = document.getElementById('reschedule-form-' + id);
         form.classList.toggle('hidden');

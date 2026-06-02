@@ -36,3 +36,18 @@ class Alert(models.Model):
 
     def __str__(self):
         return f"{self.type} for {self.user.username}"
+
+
+class SessionAuditLog(models.Model):
+    session = models.ForeignKey('scheduling.LectureSession', on_delete=models.CASCADE, related_name='audit_logs')
+    action = models.CharField(max_length=100)
+    performed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
+    notes = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ['-timestamp']
+
+    def __str__(self):
+        performer = self.performed_by.username if self.performed_by else "System"
+        return f"{self.action} by {performer} on {self.timestamp.date()}"

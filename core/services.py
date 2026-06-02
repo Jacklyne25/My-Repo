@@ -1,8 +1,8 @@
 from django.utils import timezone
 from django.db.models import Count
-from .models import Alert
 from users.models import User
 from scheduling.models import LectureSession
+from core.models import Alert, SessionAuditLog
 from datetime import datetime, timedelta
 
 class AlertService:
@@ -139,7 +139,18 @@ class AlertService:
 
     @staticmethod
     def notify_session_confirmed(session, lecturer):
-        # Notify affected students
+        # 1. Notify Coordinator (They can now capture attendance)
+        coordinator = User.objects.filter(course_group=session.timetable_entry.course_group, role=User.Role.COORDINATOR).first()
+        if coordinator:
+            AlertService.create_alert(
+                user=coordinator,
+                category=Alert.Category.TIMETABLE,
+                severity=Alert.Severity.INFO,
+                alert_type="SESSION_APPROVED",
+                message=f"SESSION APPROVED: {session.timetable_entry.course_unit.code} has been approved by {lecturer.get_full_name() or lecturer.username}. You may now capture attendance."
+            )
+
+        # 2. Notify affected students
         students = User.objects.filter(course_group=session.timetable_entry.course_group, role=User.Role.STUDENT, is_active=True)
         room_name = session.timetable_entry.room.name if session.timetable_entry.room else "the assigned room"
         message = f"LECTURE CONFIRMED: {session.timetable_entry.course_unit.code} is confirmed to take place today in {room_name}."
@@ -187,7 +198,7 @@ class AlertService:
     @staticmethod
     def notify_attendance_recorded(session, recorded_by):
         lecturer = session.timetable_entry.lecturer
-        message = f"Attendance for {session.timetable_entry.course_unit.code} ({session.date}) has been recorded by {recorded_by.get_full_name() or recorded_by.username}."
+        message = f"Attendance for {session.timetable_entry.course_unit.code} ({session.date}) has been recorded by {recorded_by.get_full_name() or recorded_by.username} and is awaiting your final verification."
         AlertService.create_alert(
             user=lecturer,
             category=Alert.Category.REMINDER,
@@ -259,6 +270,53 @@ class AlertService:
                     coord,
                     f"Attendance for {session.timetable_entry.course_unit.name} on {session.date} has not been submitted."
                 )
+
+    @staticmethod
+    def auto_confirm_pending_sessions():
+        """
+        Automatically confirm/conduct sessions that have attendance but haven't been approved within 72 hours.
+        """
+        now = timezone.now()
+        cutoff = now - timedelta(hours=72)
+        
+        # We check sessions in PENDING_VERIFICATION
+        overdue_sessions = LectureSession.objects.filter(
+            status=LectureSession.Status.PENDING_VERIFICATION,
+            date__lte=cutoff.date() # Simplified to date for safety, but 72h is the rule
+        )
+
+        confirmed_count = 0
+        for session in overdue_sessions:
+            # Condition: Attendance must exist
+            has_attendance = session.attendance_records.exists() or bool(session.signed_sheet)
+            
+            if has_attendance:
+                session.status = LectureSession.Status.CONDUCTED
+                session.verification_timestamp = now
+                session.save()
+                
+                # Audit Log
+                SessionAuditLog.objects.create(
+                    session=session,
+                    action="AUTO_VERIFIED",
+                    performed_by=None, # System
+                    notes="System automatically marked session as Conducted after 72-hour lecturer inaction."
+                )
+                
+                # Notify HOD
+                dept = session.timetable_entry.course_unit.programs.first().department
+                hods = User.objects.filter(department=dept, role=User.Role.HOD)
+                for hod in hods:
+                    AlertService.create_alert(
+                        user=hod,
+                        category=Alert.Category.COMPLIANCE,
+                        severity=Alert.Severity.WARNING,
+                        alert_type="AUTO_CONFIRMATION_NOTICE",
+                        message=f"System Override: Session for {session.timetable_entry.course_unit.code} was automatically marked Conducted due to lecturer inaction."
+                    )
+                confirmed_count += 1
+        
+        return confirmed_count
 
     @staticmethod
     def send_announcement(sender, target_group, message, department=None, program=None, course_unit=None):

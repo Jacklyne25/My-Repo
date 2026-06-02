@@ -1,50 +1,435 @@
 {% extends 'base.html' %}
+{% load static %}
 
-{% block title %}Department Timetable{% endblock %}
+{% block title %}Department Timetable Management{% endblock %}
 
 {% block content %}
-<div class="card">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-        <h1 style="color: var(--primary); margin: 0;">Department Timetable</h1>
+<div class="timetable-page-container">
+    <div class="header-section">
         <div>
-            <a href="{% url 'academic:import_data' %}" class="btn"
-                style="background-color: var(--text-muted); margin-right: 0.5rem;">Import Timetable</a>
-            <a href="{% url 'users:hod_dashboard' %}" class="btn">Back to Dashboard</a>
+            <h1 class="main-title">Academic Timetable</h1>
+            <p class="subtitle">Drag and drop sessions to reschedule. All changes are validated in real-time.</p>
+        </div>
+        <div class="header-actions">
+            <a href="{% url 'academic:import_data' %}" class="btn-secondary">📤 Import Data</a>
+            <a href="{% url 'users:hod_dashboard' %}" class="btn-primary">🏠 Dashboard</a>
         </div>
     </div>
 
-    {% if timetable_entries %}
-    <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
-        <thead>
-            <tr style="text-align: left; border-bottom: 2px solid var(--border);">
-                <th style="padding: 0.75rem;">Day</th>
-                <th style="padding: 0.75rem;">Time</th>
-                <th style="padding: 0.75rem;">Program</th>
-                <th style="padding: 0.75rem;">Course Unit</th>
-                <th style="padding: 0.75rem;">Teaching Staff</th>
-                <th style="padding: 0.75rem;">Venue</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for entry in timetable_entries %}
-            <tr style="border-bottom: 1px solid var(--border);">
-                <td style="padding: 0.75rem; font-weight: bold;">{{ entry.get_day_of_week_display }}</td>
-                <td style="padding: 0.75rem;">{{ entry.start_time|time:"H:i" }} - {{ entry.end_time|time:"H:i" }}</td>
-                <td style="padding: 0.75rem;">{{ entry.program.code }}</td>
-                <td style="padding: 0.75rem;">{{ entry.course_unit.code }} - {{ entry.course_unit.name }}</td>
-                <td style="padding: 0.75rem;">{{ entry.lecturer.get_full_name }}</td>
-                <td style="padding: 0.75rem;">{{ entry.room.name }}</td>
-            </tr>
+    {% if timeslots %}
+    <div class="timetable-grid-wrapper">
+        <div class="timetable-grid">
+            <!-- Day Headers -->
+            <div class="grid-header-corner">Time</div>
+            {% for code, name in days %}
+                <div class="grid-day-header">{{ name }}</div>
             {% endfor %}
-        </tbody>
-    </table>
+
+            <!-- Grid Rows -->
+            {% for slot_start, slot_end in timeslots %}
+                <div class="grid-time-label">
+                    {{ slot_start|time:"H:i" }} - {{ slot_end|time:"H:i" }}
+                </div>
+                
+                {% with start_str=slot_start|time:"H:i" %}
+                {% for day_code, day_name in days %}
+                    <div class="grid-cell" 
+                         data-day="{{ day_code }}" 
+                         data-time="{{ start_str }}" 
+                         ondragover="allowDrop(event)" 
+                         ondrop="handleDrop(event)">
+                        
+                        {% with key=day_code|add:","|add:start_str %}
+                        {% for entry in grid_map.values %}
+                            {% for e in entry %}
+                                {% if e.day_of_week == day_code and e.start_time|time:"H:i" == start_str %}
+                                    <div class="timetable-card category-{{ e.course_unit.course_category|lower }}" 
+                                         draggable="true" 
+                                         id="entry-{{ e.pk }}" 
+                                         ondragstart="handleDragStart(event)"
+                                         data-entry-id="{{ e.pk }}">
+                                        
+                                        <div class="card-status">
+                                            <span class="mode-tag {{ e.teaching_mode|lower }}">{{ e.get_teaching_mode_display }}</span>
+                                        </div>
+                                        <h3 class="card-code">{{ e.course_unit.code }}</h3>
+                                        <div class="card-meta">
+                                            <span>📍 {{ e.room.name|default:"Online" }}</span>
+                                            <span>👥 {{ e.course_group.name|default:e.program.code }}</span>
+                                        </div>
+                                        <div class="card-lecturer">👨‍🏫 {{ e.lecturer.get_full_name|default:e.lecturer.username }}</div>
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
+                        {% endfor %}
+                        {% endwith %}
+                    </div>
+                {% endfor %}
+                {% endwith %}
+            {% endfor %}
+        </div>
+    </div>
     {% else %}
-    <div
-        style="text-align: center; padding: 3rem 1rem; background: rgba(255,255,255,0.02); border-radius: 0.5rem; border: 1px dashed var(--border);">
-        <p style="color: var(--text-muted); font-size: 1.1rem; margin-bottom: 1rem;">No timetable data has been uploaded
-            yet.</p>
-        <a href="{% url 'academic:import_data' %}" class="btn">Go to Bulk Import</a>
+    <div class="empty-state-card">
+        <div class="empty-icon">📅</div>
+        <h2>No Active Timetable</h2>
+        <p>Please configure scheduling parameters or import timetable data to get started.</p>
+        <a href="{% url 'academic:import_data' %}" class="btn-primary">Go to Bulk Import</a>
     </div>
     {% endif %}
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="toast-container"></div>
 </div>
-{% endblock %}
+
+<style>
+    :root {
+        --grid-border: #e2e8f0;
+        --cell-bg: #ffffff;
+        --cell-hover: #f8fafc;
+        --time-bg: #f1f5f9;
+        --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    .timetable-page-container {
+        padding: 1.5rem;
+        background: #f8fafc;
+    }
+
+    .header-section {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2.5rem;
+    }
+
+    .main-title {
+        font-family: 'Outfit', sans-serif;
+        font-weight: 800;
+        font-size: 2rem;
+        color: #0f172a;
+        margin: 0;
+    }
+
+    .subtitle {
+        color: #64748b;
+        margin-top: 0.25rem;
+        font-weight: 500;
+    }
+
+    .header-actions {
+        display: flex;
+        gap: 0.75rem;
+    }
+
+    /* Grid Layout */
+    .timetable-grid-wrapper {
+        background: white;
+        border-radius: 1.5rem;
+        padding: 1rem;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+        border: 1px solid var(--grid-border);
+        overflow-x: auto;
+    }
+
+    .timetable-grid {
+        display: grid;
+        grid-template-columns: 120px repeat(5, 1fr);
+        min-width: 1000px;
+        gap: 1px;
+        background: var(--grid-border);
+        border: 1px solid var(--grid-border);
+        border-radius: 0.5rem;
+        overflow: hidden;
+    }
+
+    .grid-header-corner, .grid-day-header, .grid-time-label {
+        background: var(--time-bg);
+        padding: 1rem;
+        text-align: center;
+        font-weight: 800;
+        color: #475569;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .grid-day-header {
+        font-family: 'Outfit', sans-serif;
+        color: #1e293b;
+    }
+
+    .grid-time-label {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        border-right: 1px solid var(--grid-border);
+    }
+
+    .grid-cell {
+        background: var(--cell-bg);
+        min-height: 120px;
+        padding: 0.5rem;
+        transition: background-color 0.2s;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .grid-cell:hover {
+        background: var(--cell-hover);
+    }
+
+    .grid-cell.drag-over {
+        background: #f0f9ff;
+        box-shadow: inset 0 0 0 2px #3b82f6;
+    }
+
+    /* Timetable Card */
+    .timetable-card {
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.75rem;
+        padding: 0.75rem;
+        box-shadow: var(--card-shadow);
+        cursor: grab;
+        transition: all 0.2s;
+        position: relative;
+        /* Prevent text selection from interfering with drag and drop */
+        user-select: none;
+        -webkit-user-drag: element;
+    }
+
+    .timetable-card:active {
+        cursor: grabbing;
+        transform: scale(0.98);
+    }
+
+    .timetable-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+
+    .timetable-card.dragging {
+        opacity: 0.5;
+        cursor: grabbing;
+        transform: scale(0.9);
+        border: 2px dashed #3b82f6;
+    }
+
+    .category-core { border-left: 4px solid #ef4444; }
+    .category-elective { border-left: 4px solid #3b82f6; }
+    .category-foundational { border-left: 4px solid #10b981; }
+
+    .card-code {
+        margin: 0.25rem 0;
+        font-weight: 800;
+        color: #1e293b;
+        font-size: 0.9rem;
+    }
+
+    .card-meta {
+        font-size: 0.7rem;
+        color: #64748b;
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .card-lecturer {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #475569;
+        border-top: 1px solid #f1f5f9;
+        padding-top: 0.4rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .mode-tag {
+        font-size: 0.6rem;
+        font-weight: 800;
+        padding: 0.1rem 0.4rem;
+        border-radius: 0.4rem;
+        text-transform: uppercase;
+    }
+
+    .mode-tag.online { background: #dcfce7; color: #15803d; }
+    .mode-tag.physical { background: #fee2e2; color: #b91c1c; }
+
+    /* Buttons */
+    .btn-primary, .btn-secondary {
+        padding: 0.75rem 1.25rem;
+        border-radius: 0.75rem;
+        font-weight: 700;
+        text-decoration: none;
+        font-size: 0.9rem;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .btn-primary { background: #0f172a; color: white; border: none; }
+    .btn-secondary { background: white; color: #1e293b; border: 1px solid #e2e8f0; }
+
+    .btn-primary:hover { background: #1e293b; transform: translateY(-2px); }
+    .btn-secondary:hover { background: #f8fafc; border-color: #cbd5e1; }
+
+    /* Toast Notifications */
+    .toast-container {
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        z-index: 2000;
+    }
+
+    .toast {
+        padding: 1rem 1.5rem;
+        border-radius: 1rem;
+        background: white;
+        color: #1e293b;
+        font-weight: 600;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        border-left: 5px solid #3b82f6;
+        animation: slideIn 0.3s ease-out;
+    }
+
+    .toast.success { border-left-color: #10b981; }
+    .toast.error { border-left-color: #ef4444; }
+
+    @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+
+    .empty-state-card {
+        background: white;
+        border-radius: 1.5rem;
+        padding: 4rem;
+        text-align: center;
+        border: 2px dashed #cbd5e1;
+    }
+
+    .empty-icon { font-size: 4rem; margin-bottom: 1rem; }
+    .empty-state-card h2 { font-weight: 800; color: #1e293b; margin-bottom: 0.5rem; }
+</style>
+
+<script>
+    // CSRF Utility
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Toast Notification System
+    function showToast(message, type = 'info') {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.innerText = message;
+        container.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            setTimeout(() => toast.remove(), 300);
+        }, 4000);
+    }
+
+    // Drag and Drop Logic
+    function handleDragStart(ev) {
+        // Clear any accidental text selection
+        window.getSelection().removeAllRanges();
+        
+        // Use currentTarget to ensure we get the data from the card, not its contents
+        const entryId = ev.currentTarget.getAttribute('data-entry-id');
+        ev.dataTransfer.setData("entryId", entryId);
+        ev.dataTransfer.effectAllowed = "move";
+        
+        // Add a visual cue to the card being dragged
+        ev.currentTarget.classList.add('dragging');
+        ev.dataTransfer.dropEffect = "move";
+    }
+
+    function allowDrop(ev) {
+        ev.preventDefault();
+        ev.currentTarget.classList.add('drag-over');
+    }
+
+    // Remove highlight on leave
+    document.querySelectorAll('.grid-cell').forEach(cell => {
+        cell.addEventListener('dragleave', (ev) => {
+            ev.currentTarget.classList.remove('drag-over');
+        });
+    });
+
+    function handleDrop(ev) {
+        ev.preventDefault();
+        const cell = ev.currentTarget;
+        cell.classList.remove('drag-over');
+        
+        const entryId = ev.dataTransfer.getData("entryId");
+        if (!entryId) return; // Prevent errors if drag failed
+
+        const entryEl = document.getElementById('entry-' + entryId);
+        if (entryEl) entryEl.classList.remove('dragging');
+
+        const newDay = cell.getAttribute('data-day');
+        const newTime = cell.getAttribute('data-time');
+
+        if (!entryEl) {
+            console.error('Entry element not found:', entryId);
+            return;
+        }
+
+        // Logic check: Is it already here?
+        const parentCell = entryEl.parentElement;
+        if (parentCell === cell) return;
+
+        // Perform AJAX Rescheduling
+        const csrftoken = getCookie('csrftoken');
+        const updateUrl = "{% url 'academic:update_timetable_entry' 0 %}".replace('0', entryId);
+
+        const formData = new FormData();
+        formData.append('day', newDay);
+        formData.append('start_time', newTime);
+
+        fetch(updateUrl, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrftoken,
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                cell.appendChild(entryEl);
+                showToast(data.message, 'success');
+            } else {
+                showToast(data.message || 'Rescheduling failed', 'error');
+            }
+        })
+        .catch(error => {
+            showToast('Unable to reach server', 'error');
+            console.error('Error:', error);
+        });
+    }
+</script>
+{% endblock %}

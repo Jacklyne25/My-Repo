@@ -90,8 +90,7 @@
 
     body {
         font-family: 'Inter', sans-serif;
-        background-color: #dbeafe;
-        box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.6), inset 0 -2px 4px rgba(0, 0, 0, 0.08);
+        background-color: var(--bg-main);
     }
 
     section {
@@ -101,7 +100,7 @@
     /* ================= HERO SECTION ================= */
 
     .welcome-hero {
-        background: linear-gradient(135deg, #8db7f9 0%, #424e8c 100%);
+        background: var(--hero-bg);
         color: #ffffff;
         text-align: center;
     }
@@ -162,7 +161,7 @@
     /* ================= FEATURES SECTION ================= */
 
     .features-section {
-        background-color: #f8f8f9;
+        background-color: var(--bg-features);
     }
 
     .section-header {
@@ -175,11 +174,11 @@
         font-size: 2.2rem;
         font-weight: 700;
         margin-bottom: 1rem;
-        color: #0f172a;
+        color: var(--text-dark);
     }
 
     .section-subtitle {
-        color: #64748b;
+        color: var(--text-muted);
         font-size: 1rem;
         line-height: 1.7;
     }
@@ -193,12 +192,12 @@
     }
 
     .feature-card {
-        background: #358ce3;
+        background: var(--feature-card-bg);
         padding: 2.5rem 2rem;
         border-radius: 12px;
         text-align: center;
         transition: all 0.3s ease;
-        border: 1px solid #e2e8f0;
+        border: 1px solid var(--border);
     }
 
     .feature-card:hover {
@@ -214,53 +213,53 @@
     .feature-card h3 {
         font-size: 1.25rem;
         margin-bottom: 0.8rem;
-        color: #00030a;
+        color: var(--text-dark);
     }
 
     .feature-card p {
         font-size: 0.95rem;
-        color: #f2f5f8;
+        color: var(--feature-card-text);
         line-height: 1.6;
     }
 
     /* ================= SECURITY SECTION ================= */
 
     .security-section {
-        background-color: #eef2f7;
+        background-color: var(--bg-security);
     }
 
     .security-card {
         max-width: 800px;
         margin: 0 auto;
-        background: #ebc4f0;
+        background: var(--bg-card-alt);
         padding: 2.5rem;
         border-radius: 12px;
-        border-left: 5px solid #2563eb;
+        border-left: 5px solid var(--primary);
         box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
     }
 
     .security-card h3 {
         margin-bottom: 1rem;
-        color: #0f172a;
+        color: var(--text-dark);
     }
 
     .security-card p {
-        color: #056af7;
+        color: var(--text-muted);
         line-height: 2.0;
     }
 
     /* ================= FOOTER ================= */
 
     .welcome-footer {
-        background-color: #358ce3;
-        color: #cbd5e1;
+        background-color: var(--bg-white);
+        color: var(--text-muted);
         text-align: center;
         padding: 3rem 2rem;
     }
 
     .footer-title {
         font-weight: 700;
-        color: #ffffff;
+        color: var(--primary);
     }
 
     .footer-sub {

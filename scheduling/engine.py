@@ -66,7 +66,7 @@ def run_auto_schedule(department, created_by=None):
     """
     Run the greedy scheduler for a department based on active parameters.
     """
-    result = {'scheduled': [], 'skipped': [], 'errors': []}
+    result = {'scheduled': [], 'skipped': [], 'errors': [], 'partial': []}
 
     # Load active parameters
     params = SchedulingParameters.objects.filter(department=department, is_active=True).first()
@@ -247,6 +247,8 @@ def run_auto_schedule(department, created_by=None):
                         )
                         missing_modes.remove(existing_entry.teaching_mode)
                         used_days.append(existing_entry.day_of_week)
+                        # Immediately break to next mode to ensure next check sees updated used_days
+                        break 
 
             if not missing_modes:
                 continue
@@ -280,12 +282,22 @@ def run_auto_schedule(department, created_by=None):
                         if not _is_lecturer_free(lecturer, day, start, end): continue
 
                         # Is current_group free?
-                        group_clash = TimetableEntry.objects.filter(
+                        group_clash_qs = TimetableEntry.objects.filter(
                             course_group=current_group,
                             day_of_week=day,
                             start_time__lt=end,
                             end_time__gt=start,
-                        ).exists()
+                        )
+                        
+                        group_clash = group_clash_qs.exists()
+                        
+                        # Elective Overlap Rule: Max 2 electives can overlap, no core overlaps.
+                        if group_clash and course_unit.course_category == 'ELECTIVE':
+                            non_electives = group_clash_qs.exclude(course_unit__course_category='ELECTIVE').count()
+                            if non_electives == 0:
+                                elective_count = group_clash_qs.filter(course_unit__course_category='ELECTIVE').count()
+                                if elective_count < 2:
+                                    group_clash = False
                         
                         if group_clash: continue
                             
@@ -313,7 +325,16 @@ def run_auto_schedule(department, created_by=None):
                                 break
                         else:
                             # Physical
-                            total_students = current_group.users.filter(role='STUDENT').count()
+                            # Room capacity check for electives uses enrollment count, core uses group size
+                            if course_unit.course_category == 'ELECTIVE':
+                                from academic.models import ElectiveEnrollment
+                                total_students = ElectiveEnrollment.objects.filter(course_unit=course_unit).count()
+                                # Fallback if no enrollment yet: assume 50% of group
+                                if total_students == 0:
+                                    total_students = current_group.users.filter(role='STUDENT').count() // 2
+                            else:
+                                total_students = current_group.users.filter(role='STUDENT').count()
+                                
                             valid_rooms = sorted([r for r in rooms if r.capacity >= total_students], key=lambda r: (r.capacity, room_weekly_sessions[r.pk]))
 
                             if not valid_rooms: valid_rooms = list(rooms)
@@ -350,6 +371,20 @@ def run_auto_schedule(department, created_by=None):
                         'group': current_group.name,
                         'reason': 'No available conflict-free slot found'
                     })
+
+        # Post-run Compliance Check: Count sessions per (unit, group) pair
+        for unit, group in all_pairs:
+            session_count = TimetableEntry.objects.filter(
+                course_unit=unit,
+                course_group=group,
+                scheduling_params=params
+            ).count()
+            if session_count < 2:
+                result['partial'].append({
+                    'course_unit': unit.code,
+                    'group': group.name,
+                    'count': session_count
+                })
 
     return result
 
@@ -423,11 +458,31 @@ def check_manual_conflict(course_unit_id, lecturer_id, room_id, day, start_time,
             group_conflict = group_conflict.exclude(pk=exclude_pk)
         
         if group_conflict.exists():
-            conflict_entry = group_conflict.first()
-            conflicts.append({
-                'type': 'group',
-                'message': f"Class Group already has {conflict_entry.course_unit.code} scheduled at this time."
-            })
+            # Elective Overlap Rule
+            if cu.course_category == 'ELECTIVE':
+                non_electives = group_conflict.exclude(course_unit__course_category='ELECTIVE').count()
+                if non_electives == 0:
+                    elective_count = group_conflict.filter(course_unit__course_category='ELECTIVE').count()
+                    if elective_count < 2:
+                        # Allowed to overlap
+                        pass
+                    else:
+                        conflicts.append({
+                            'type': 'group',
+                            'message': f"Class Group already has {elective_count} electives scheduled at this time. Maximum allowed is 2."
+                        })
+                else:
+                    conflict_entry = group_conflict.exclude(course_unit__course_category='ELECTIVE').first()
+                    conflicts.append({
+                        'type': 'group',
+                        'message': f"Class Group already has a CORE/FOUNDATIONAL unit ({conflict_entry.course_unit.code}) scheduled at this time."
+                    })
+            else:
+                conflict_entry = group_conflict.first()
+                conflicts.append({
+                    'type': 'group',
+                    'message': f"Class Group already has {conflict_entry.course_unit.code} scheduled at this time."
+                })
 
     # Course clash (Duplicate session for same unit/group/time?)
     qs = TimetableEntry.objects.filter(

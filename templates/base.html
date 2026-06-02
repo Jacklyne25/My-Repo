@@ -18,14 +18,13 @@
     <style>
         /* ================= COLOR SYSTEM (INSTITUTIONAL STANDARD) ================= */
         :root {
-            --primary: #2563eb;
-            /* Institutional Blue */
+            --primary: #2563eb; /* Institutional Blue */
             --primary-dark: #1d4ed8;
             --primary-light: #dbeafe;
 
-            --bg-main: #f4f6f9;
+            --bg-main: #dbeafe; /* Original Soft Blue */
             --bg-white: #ffffff;
-            --bg-soft: #eef2f7;
+            --bg-soft: #f8f8f9;
 
             --text-dark: #0f172a;
             --text-muted: #64748b;
@@ -33,6 +32,42 @@
             --border: #e2e8f0;
             --success: #16a34a;
             --danger: #dc2626;
+
+            --nav-bg: #e9d5ff; /* Original Light purple for nav */
+            --glass-bg: rgba(255, 255, 255, 0.8);
+            --bg-overlay: rgba(219, 234, 254, 0.6);
+
+            --hero-bg: linear-gradient(135deg, #8db7f9 0%, #424e8c 100%); /* Original Hero */
+            --bg-features: #f8f8f9;
+            --bg-security: #eef2f7;
+            --bg-card-alt: #ebc4f0; /* Original security card purple */
+
+            --feature-card-bg: #358ce3;
+            --feature-card-text: #f2f5f8;
+        }
+
+        [data-theme="dark"] {
+            --bg-main: #0f172a;
+            --bg-white: #1e293b;
+            --bg-soft: #1e293b;
+
+            --text-dark: #f8fafc;
+            --text-muted: #94a3b8;
+
+            --border: #334155;
+            --primary-light: rgba(37, 99, 235, 0.1);
+
+            --nav-bg: #1e293b;
+            --glass-bg: rgba(15, 23, 42, 0.8);
+            --bg-overlay: rgba(15, 23, 42, 0.7);
+
+            --hero-bg: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            --bg-features: #1e293b;
+            --bg-security: #0f172a;
+            --bg-card-alt: #334155;
+
+            --feature-card-bg: #1e293b;
+            --feature-card-text: #94a3b8;
         }
 
         /* ================= RESET ================= */
@@ -68,7 +103,7 @@
 
         /* ================= NAVBAR ================= */
         nav {
-            background: #e9d5ff;
+            background: var(--nav-bg);
             border-bottom: 1px solid var(--border);
             padding: 1rem 0;
             position: fixed;
@@ -236,32 +271,59 @@
 
     <!-- ================= PAGE CONTENT ================= -->
     <main class="main-content">
+        <div class="container" style="padding-top: 0; padding-bottom: 0;">
+            {% if messages %}
+            <div id="global-messages" style="margin-bottom: 1.5rem;">
+                {% for message in messages %}
+                <div class="card" style="margin-bottom: 0.75rem; padding: 1rem 1.25rem; border-left: 5px solid {% if message.tags == 'error' %}var(--danger){% elif message.tags == 'success' %}var(--success){% elif message.tags == 'warning' %}#f59e0b{% else %}var(--primary){% endif %}; background: {% if message.tags == 'error' %}#fef2f2{% elif message.tags == 'success' %}#f0fdf4{% elif message.tags == 'warning' %}#fffbeb{% else %}#eff6ff{% endif %}; display: flex; align-items: center; justify-content: space-between; gap: 1rem; animation: slideIn 0.3s ease-out forwards;">
+                    <div style="display: flex; align-items: center; gap: 0.75rem; font-weight: 600; color: var(--text-dark);">
+                        <span style="font-size: 1.2rem;">
+                            {% if message.tags == 'error' %}⚠️{% elif message.tags == 'success' %}✅{% elif message.tags == 'warning' %}🔔{% else %}ℹ️{% endif %}
+                        </span>
+                        <span>{{ message }}</span>
+                    </div>
+                    <button onclick="this.parentElement.remove()" style="background: none; border: none; font-size: 1.5rem; color: #94a3b8; cursor: pointer;">&times;</button>
+                </div>
+                {% endfor %}
+            </div>
+            <style>
+                @keyframes slideIn {
+                    from { opacity: 0; transform: translateY(-10px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+            </style>
+            {% endif %}
+        </div>
+
+        {% block fluid_content %}{% endblock %}
+
+        {% block standard_content %}
         <div class="container">
             {% block content %}{% endblock %}
         </div>
+        {% endblock %}
     </main>
 
     {% block extra_js %}{% endblock %}
 
     <!-- Theme Toggle Script -->
     <script>
+        // Apply theme immediately to prevent flashing
+        (function() {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            document.addEventListener('DOMContentLoaded', () => {
+                document.body.setAttribute('data-theme', savedTheme);
+            });
+        })();
+
         document.addEventListener('DOMContentLoaded', () => {
             const themeBtn = document.getElementById('themeToggleBtn');
-            // If they click the toggle, randomly change standard colors to demonstrate toggle functionality
-            // For full dark mode, usually we toggle a class on body like .dark-mode that changes CSS vars.
             themeBtn.addEventListener('click', () => {
-                const isDark = document.body.dataset.theme === 'dark';
-                if (isDark) {
-                    document.body.dataset.theme = 'light';
-                    document.documentElement.style.setProperty('--bg-main', '#f4f6f9');
-                    document.documentElement.style.setProperty('--bg-white', '#ffffff');
-                    document.documentElement.style.setProperty('--glass-bg', 'rgba(255, 255, 255, 0.9)');
-                } else {
-                    document.body.dataset.theme = 'dark';
-                    document.documentElement.style.setProperty('--bg-main', '#0f172a');
-                    document.documentElement.style.setProperty('--bg-white', '#1e293b');
-                    document.documentElement.style.setProperty('--glass-bg', 'rgba(15, 23, 42, 0.9)');
-                }
+                const currentTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+                document.documentElement.setAttribute('data-theme', currentTheme);
+                document.body.setAttribute('data-theme', currentTheme);
+                localStorage.setItem('theme', currentTheme);
             });
         });
     </script>

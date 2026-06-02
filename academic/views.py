@@ -112,6 +112,10 @@ class DepartmentCourseListView(LoginRequiredMixin, HODRequiredMixin, ListView):
             department=self.request.user.department,
             role=User.Role.LECTURER
         ).order_by('first_name', 'last_name')
+        context['coordinators'] = User.objects.filter(
+            department=self.request.user.department,
+            role=User.Role.COORDINATOR
+        ).order_by('first_name', 'last_name')
         return context
 
 class AssignLecturerView(LoginRequiredMixin, HODRequiredMixin, View):
@@ -119,10 +123,40 @@ class AssignLecturerView(LoginRequiredMixin, HODRequiredMixin, View):
         course = get_object_or_404(CourseUnit.objects.filter(programs__department=request.user.department).distinct(), pk=pk)
         lecturer_id = request.POST.get('lecturer_id')
         from users.models import User
-        lecturer = get_object_or_404(User, pk=lecturer_id, role=User.Role.LECTURER, department=request.user.department)
-        course.lecturer = lecturer
+        if lecturer_id:
+            lecturer = get_object_or_404(User, pk=lecturer_id, role=User.Role.LECTURER, department=request.user.department)
+            course.lecturer = lecturer
+        else:
+            course.lecturer = None
         course.save()
-        messages.success(request, f"Assigned {lecturer.get_full_name() or lecturer.username} to {course.name}.")
+        messages.success(request, f"Teacher assignment updated for {course.name}.")
+        return redirect('academic:hod_course_list')
+
+class AssignAssistantCoordinatorView(LoginRequiredMixin, HODRequiredMixin, View):
+    """
+    Assigns a Course Unit Coordinator (Assistant Coordinator) responsible for 
+    attendance monitoring for this specific elective.
+    """
+    def post(self, request, pk):
+        course = get_object_or_404(CourseUnit.objects.filter(programs__department=request.user.department).distinct(), pk=pk)
+        
+        # Security/Rules Check: Only Electives can have Assistant Coordinators
+        if course.course_category != CourseUnit.CourseCategory.ELECTIVE:
+            messages.error(request, f"Cannot assign a coordinator to '{course.name}' because it is not an Elective course unit.")
+            return redirect('academic:hod_course_list')
+
+        coordinator_id = request.POST.get('coordinator_id')
+        from users.models import User
+        
+        if coordinator_id:
+            coordinator = get_object_or_404(User, pk=coordinator_id, role=User.Role.COORDINATOR, department=request.user.department)
+            course.assistant_coordinator = coordinator
+            messages.success(request, f"Assigned {coordinator.get_full_name() or coordinator.username} as unit coordinator for {course.name}.")
+        else:
+            course.assistant_coordinator = None
+            messages.success(request, f"Removed unit coordinator from {course.name}.")
+            
+        course.save()
         return redirect('academic:hod_course_list')
 
 class DownloadTemplateView(LoginRequiredMixin, HODRequiredMixin, View):
@@ -154,7 +188,9 @@ class DownloadTemplateView(LoginRequiredMixin, HODRequiredMixin, View):
         elif type == 'programs':
             headers = ['Name', 'Code']
             data = [['Bachelor of Science in Information Technology', 'BSIT']]
-            data = [['Year 1 CS', 'BSCS']]
+        elif type == 'elective_enrollment':
+            headers = ['Registration No', 'Course Code', 'Academic Year', 'Semester']
+            data = [['REG/2026/001', 'CMP201', '2025/2026', '1']]
         else:
             return HttpResponse("Invalid template type", status=400)
 
@@ -205,6 +241,8 @@ class ImportDataView(LoginRequiredMixin, HODRequiredMixin, View):
             results = BulkImportService.import_course_groups(file, request.user.department)
         elif type == 'programs':
             results = BulkImportService.import_programs(file, request.user.department)
+        elif type == 'elective_enrollment':
+            results = BulkImportService.import_elective_enrollments(file, request.user.department)
         else:
             messages.error(request, "Invalid import type.")
             return redirect('academic:import_data')
@@ -227,7 +265,82 @@ class DepartmentTimetableView(LoginRequiredMixin, HODRequiredMixin, ListView):
 
     def get_queryset(self):
         # Filter timetable entries by programs belonging to the HOD's department
-        return TimetableEntry.objects.filter(program__department=self.request.user.department).order_by('day_of_week', 'start_time')
+        return TimetableEntry.objects.filter(program__department=self.request.user.department).select_related('course_unit', 'lecturer', 'program', 'room').order_by('day_of_week', 'start_time')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        department = self.request.user.department
+        
+        from scheduling.models import SchedulingParameters
+        params = SchedulingParameters.objects.filter(department=department, is_active=True).first()
+        
+        if params:
+            context['days'] = [('MON', 'Monday'), ('TUE', 'Tuesday'), ('WED', 'Wednesday'), ('THU', 'Thursday'), ('FRI', 'Friday')]
+            context['timeslots'] = params.get_timeslots()
+            
+            # Map entries to a (day, time) grid lookup for the template
+            grid_map = {}
+            for entry in self.get_queryset():
+                key = (entry.day_of_week, entry.start_time.strftime('%H:%M'))
+                if key not in grid_map:
+                    grid_map[key] = []
+                grid_map[key].append(entry)
+            context['grid_map'] = grid_map
+            context['params'] = params
+        
+        return context
+
+class UpdateTimetableEntryView(LoginRequiredMixin, HODRequiredMixin, View):
+    """AJAX endpoint for 'Hold and Drag' rescheduling of a timetable entry."""
+    def post(self, request, pk):
+        import json
+        from django.http import JsonResponse
+        from datetime import datetime
+        
+        entry = get_object_or_404(TimetableEntry, pk=pk, program__department=request.user.department)
+        
+        new_day = request.POST.get('day')
+        new_time_str = request.POST.get('start_time')
+        
+        if not all([new_day, new_time_str]):
+            return JsonResponse({'success': False, 'message': 'Missing rescheduling parameters.'}, status=400)
+            
+        try:
+            old_day = entry.day_of_week
+            old_time = entry.start_time
+            
+            # Translate time and update entry
+            new_start = datetime.strptime(new_time_str, '%H:%M').time()
+            
+            # Current duration
+            from datetime import timedelta
+            duration_hours = entry.scheduling_params.slot_duration_hours if entry.scheduling_params else 2
+            
+            entry.day_of_week = new_day
+            entry.start_time = new_start
+            
+            # Calculate end time based on original duration
+            # Using a dummy date to handle time math
+            temp_dt = datetime.combine(datetime.today(), new_start) + timedelta(hours=duration_hours)
+            entry.end_time = temp_dt.time()
+            
+            # CRITICAL: Trigger model validation (Room conflict, Lecturer conflict, One-session-per-day)
+            entry.full_clean()
+            entry.save()
+            
+            return JsonResponse({
+                'success': True, 
+                'message': f"Moved {entry.course_unit.code} to {entry.get_day_of_week_display()} at {new_time_str}."
+            })
+            
+        except ValidationError as e:
+            # Flatten validation errors for clear toast notifications
+            msgs = []
+            for field, errors in e.message_dict.items():
+                msgs.extend(errors)
+            return JsonResponse({'success': False, 'message': " | ".join(msgs)}, status=400)
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': f"System Error: {str(e)}"}, status=500)
 
 class CourseUnitForm(forms.ModelForm):
     class Meta:

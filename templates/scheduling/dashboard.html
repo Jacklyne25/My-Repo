@@ -6,10 +6,17 @@
 {% block content %}
 <style>
     body {
-        background-image: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url("{% static 'images/dsh.jpg' %}");
+        background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url("{% static 'images/dsh.jpg' %}");
         background-size: cover;
         background-attachment: fixed;
         background-position: center;
+    }
+    .dashboard-main-area {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(16px);
+        border-radius: 1.5rem;
+        padding: 2.5rem;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
     }
     .dashboard-main-card {
         background: var(--glass-bg, rgba(255, 255, 255, 0.9)) !important;
@@ -157,9 +164,34 @@
         background: var(--bg-dark);
         color: var(--text);
     }
+
+    .btn-home {
+        background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+        color: white !important;
+        padding: 0.9rem 1.75rem;
+        border-radius: 1rem;
+        font-weight: 800;
+        font-family: 'Outfit', sans-serif;
+        font-size: 1rem;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.75rem;
+        box-shadow: 0 10px 20px -5px rgba(139, 92, 246, 0.5);
+        border: 2px solid rgba(255, 255, 255, 0.15);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .btn-home:hover {
+        transform: translateY(-3px) scale(1.02);
+        box-shadow: 0 20px 30px -8px rgba(139, 92, 246, 0.6);
+        border-color: rgba(255, 255, 255, 0.4);
+        background: linear-gradient(135deg, #a78bfa 0%, #7c3aed 100%);
+    }
 </style>
 
-<div class="card dashboard-main-card" style="max-width: 1000px; margin: 0 auto;">
+<div class="dashboard-main-area">
     <h1 style="color: var(--primary); margin-bottom: 0.5rem;">Timetable Scheduler</h1>
     <p style="color: var(--text-muted); margin-bottom: 2rem;">Follow the 7-step workflow to generate and finalize your
         department timetable.</p>
@@ -396,9 +428,10 @@
     </div>
     {% endif %}
 
-    <div style="margin-top: 3rem; text-align: center;">
-        <a href="{% url 'users:hod_dashboard' %}"
-            style="color: var(--text-muted); text-decoration: none; font-size: 0.9rem;">← Back to Dashboard</a>
+    <div style="margin-top: 4rem; text-align: center; padding-top: 2rem; border-top: 1px solid rgba(0,0,0,0.1);">
+        <a href="{% url 'users:hod_dashboard' %}" class="btn-home">
+            <span style="font-size: 1.25rem;">🏠</span> Return to home
+        </a>
     </div>
 
     <!-- Quick Link: Manage All Timetables -->

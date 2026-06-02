@@ -28,7 +28,6 @@ class NotificationTests(TestCase):
         
         self.params = SchedulingParameters.objects.create(
             department=self.dept,
-            semester=1,
             cohort='EASTER',
             academic_year="2026/2027",
             available_days="MON,TUE",

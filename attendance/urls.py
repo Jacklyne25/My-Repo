@@ -23,5 +23,6 @@ urlpatterns = [
     path('mark-missed-sessions/', MarkMissedSessionsView.as_view(), name='mark_missed_sessions'),
     path('sessions/<int:pk>/confirm/', ConfirmSessionView.as_view(), name='confirm_session'),
     path('sessions/<int:pk>/cancel/', CancelSessionView.as_view(), name='cancel_session'),
+    path('weekly/<str:week_str>/<int:course_id>/review/', LecturerReviewWeekView.as_view(), name='review_week'),
     path('generate-report/', GenerateReportView.as_view(), name='generate_report'),
 ]

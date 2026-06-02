@@ -135,9 +135,55 @@
         outline: 2px solid var(--primary);
         background: rgba(99, 102, 241, 0.1);
     }
+
+    /* Hold and Drag Styles */
+    .grid-cell.drag-over {
+        background: rgba(99, 102, 241, 0.15) !important;
+        box-shadow: inset 0 0 0 2px var(--primary) !important;
+    }
+    .schedule-entry.dragging {
+        opacity: 0.5;
+        transform: scale(0.95);
+        border: 2px dashed var(--primary) !important;
+    }
+
+    /* Toast Notifications */
+    .toast-container {
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        z-index: 2000;
+    }
+    .toast {
+        padding: 0.8rem 1.25rem;
+        border-radius: 0.75rem;
+        background: white;
+        color: #1e293b;
+        font-weight: 600;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        border-left: 5px solid #3b82f6;
+        animation: slideIn 0.3s ease-out;
+        font-size: 0.85rem;
+    }
+    .toast.success { border-left-color: #10b981; }
+    .toast.error { border-left-color: #ef4444; }
+    @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+    .dashboard-main-area {
+        background: var(--glass-bg, rgba(255, 255, 255, 0.95)) !important;
+        backdrop-filter: blur(12px);
+        padding: 2rem;
+        border-radius: 12px;
+        overflow-x: hidden;
+    }
 </style>
 
-<div class="card" style="max-width: 800px; margin: 0 auto;">
+<div class="dashboard-main-area">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
         <h1 style="color: var(--primary); margin: 0;">Step 6: Manual Adjustment</h1>
         <a href="{% url 'scheduling:conflict_review' %}" class="btn"
@@ -293,11 +339,17 @@
                     <td class="grid-cell" 
                         data-day="{{ slot.day }}" 
                         data-slot="{{ row.time|slice:':5' }}-{{ row.time|slice:'-5:' }}"
-                        onclick="selectGridSlot(this)">
+                        onclick="selectGridSlot(this)"
+                        ondragover="allowDrop(event)"
+                        ondrop="handleDrop(event)">
                         {% if slot.has_entry %}
                         <div style="display: flex; flex-direction: column; gap: 0.35rem;">
                             {% for entry in slot.entries %}
-                            <div class="schedule-entry" style="{% if entry.teaching_mode == 'ONLINE' %}background: #f0fdf4; border-left-color: #22c55e;{% else %}cursor: pointer;{% endif %}"
+                            <div class="schedule-entry" 
+                                 id="entry-{{ entry.pk }}"
+                                 draggable="true"
+                                 ondragstart="handleDragStart(event)"
+                                 style="{% if entry.teaching_mode == 'ONLINE' %}background: #f0fdf4; border-left-color: #22c55e;{% else %}cursor: grab;{% endif %}"
                                  data-pk="{{ entry.pk }}"
                                  data-group="{{ entry.course_group.pk }}"
                                  data-unit="{{ entry.course_unit.pk }}"
@@ -305,7 +357,7 @@
                                  data-room="{{ entry.room.pk|default:'' }}"
                                  data-mode="{{ entry.teaching_mode }}"
                                  onclick="selectSession(this, event)"
-                                 title="Click to adjust this session">
+                                 title="Hold and drag to reschedule or click to edit">
                                 <div class="entry-code">{{ entry.course_unit.code }}</div>
                                 <div class="entry-room" style="font-size: 0.7rem;">{{ entry.course_group.name }}</div>
                             </div>
@@ -475,5 +527,94 @@
         
         document.querySelector('.card').scrollIntoView({ behavior: 'smooth' });
     }
+
+    // ── HOLD AND DRAG ──────────────────────────────────────
+
+    function showToast(message, type) {
+        type = type || 'info';
+        var container = document.getElementById('toast-container');
+        if (!container) return;
+        var toast = document.createElement('div');
+        toast.className = 'toast ' + type;
+        toast.innerText = message;
+        container.appendChild(toast);
+        setTimeout(function() {
+            toast.style.transition = 'opacity 0.3s';
+            toast.style.opacity = '0';
+            setTimeout(function() { toast.remove(); }, 300);
+        }, 4000);
+    }
+
+    function handleDragStart(ev) {
+        window.getSelection().removeAllRanges();
+        ev.dataTransfer.setData('entryId', ev.currentTarget.dataset.pk);
+        ev.dataTransfer.effectAllowed = 'move';
+        ev.currentTarget.classList.add('dragging');
+    }
+
+    function allowDrop(ev) {
+        ev.preventDefault();
+        ev.currentTarget.classList.add('drag-over');
+    }
+
+    document.addEventListener('dragleave', function(ev) {
+        if (ev.target.classList && ev.target.classList.contains('grid-cell')) {
+            ev.target.classList.remove('drag-over');
+        }
+    });
+
+    function handleDrop(ev) {
+        ev.preventDefault();
+        var cell = ev.currentTarget;
+        cell.classList.remove('drag-over');
+
+        var entryId = ev.dataTransfer.getData('entryId');
+        if (!entryId) return;
+
+        var entryEl = document.getElementById('entry-' + entryId);
+        if (entryEl) entryEl.classList.remove('dragging');
+
+        var newDay  = cell.dataset.day;
+        var newSlot = cell.dataset.slot;          // "HH:MM-HH:MM"
+        var newTime = newSlot.split('-')[0];
+
+        var updateUrl = "{% url 'academic:update_timetable_entry' 0 %}".replace('0', entryId);
+        var formData  = new FormData();
+        formData.set('day', newDay);
+        formData.set('start_time', newTime);
+
+        fetch(updateUrl, {
+            method:  'POST',
+            headers: { 'X-CSRFToken': CSRF },
+            body:    formData
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) {
+                var targetDiv = cell.querySelector('div');
+                if (!targetDiv) {
+                    cell.innerHTML = '<div style="display:flex;flex-direction:column;gap:.35rem;"></div>';
+                    targetDiv = cell.querySelector('div');
+                }
+                targetDiv.appendChild(entryEl);
+                showToast(data.message, 'success');
+
+                // keep form in sync if this entry is being edited
+                var form = document.getElementById('manual-form');
+                if (form && form.action.includes(entryId)) {
+                    document.getElementById('id_day').value  = newDay;
+                    document.getElementById('id_slot').value = newSlot;
+                    triggerCheck();
+                }
+            } else {
+                showToast(data.message || 'Rescheduling failed', 'error');
+            }
+        })
+        .catch(function() {
+            showToast('Unable to connect to server', 'error');
+        });
+    }
 </script>
+
+<div id="toast-container" class="toast-container"></div>
 {% endblock %}

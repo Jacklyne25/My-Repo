@@ -2,13 +2,37 @@
 
 {% block title %}Program Management{% endblock %}
 
-{% block content %}
+<style>
+    .btn-home {
+        background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+        color: white !important;
+        padding: 0.75rem 1.5rem;
+        border-radius: 1rem;
+        font-weight: 800;
+        font-family: 'Outfit', sans-serif;
+        font-size: 0.95rem;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.6rem;
+        box-shadow: 0 8px 16px -4px rgba(139, 92, 246, 0.4);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .btn-home:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 15px 25px -5px rgba(139, 92, 246, 0.5);
+        filter: brightness(1.1);
+    }
+</style>
+
 <div class="card">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
         <h1 style="color: var(--primary); margin: 0;">Program Management</h1>
-        <div style="display: flex; gap: 1rem;">
-            <a href="{% if request.user.role == 'HOD' %}{% url 'users:hod_dashboard' %}{% else %}{% url 'academic:faculty_dashboard' %}{% endif %}" class="btn"
-               style="background-color: var(--card-bg); border: 1px solid var(--border);">Back to Dashboard</a>
+        <div style="display: flex; gap: 1rem; align-items: center;">
+            <a href="{% if request.user.role == 'HOD' %}{% url 'users:hod_dashboard' %}{% else %}{% url 'academic:faculty_dashboard' %}{% endif %}" class="btn-home">
+                <span>🏠</span> Return to home
+            </a>
             {% if request.user.role == 'HOD' %}
             <a href="{% url 'academic:add_program' %}" class="btn">Add Program</a>
             {% endif %}

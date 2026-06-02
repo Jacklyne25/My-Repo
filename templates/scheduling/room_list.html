@@ -13,14 +13,6 @@
         </div>
     </div>
 
-    {% if messages %}
-    {% for message in messages %}
-    <div style="padding: 1rem; margin-bottom: 1.5rem; border-radius: 0.5rem; background: rgba(34, 197, 94, 0.1); border: 1px solid #22c55e; color: #86efac;">
-        {{ message }}
-    </div>
-    {% endfor %}
-    {% endif %}
-
     <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1.5rem;">
         {% for room in rooms %}
         <div class="card" style="padding: 1.5rem; text-align: center; border: 1px solid var(--border); transition: transform 0.2s;"

@@ -273,6 +273,54 @@
         font-size: 1.2rem;
         color: #0f172a;
     }
+    .btn-home {
+        background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+        color: white !important;
+        padding: 0.9rem 1.75rem;
+        border-radius: 1rem;
+        font-weight: 800;
+        font-family: 'Outfit', sans-serif;
+        font-size: 1rem;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.75rem;
+        box-shadow: 0 10px 20px -5px rgba(139, 92, 246, 0.5);
+        border: 2px solid rgba(255, 255, 255, 0.15);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .btn-home:hover {
+        transform: translateY(-3px) scale(1.02);
+        box-shadow: 0 20px 30px -8px rgba(139, 92, 246, 0.6);
+        border-color: rgba(255, 255, 255, 0.4);
+        background: linear-gradient(135deg, #a78bfa 0%, #7c3aed 100%);
+    }
+    .btn-home {
+        background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+        color: white !important;
+        padding: 0.9rem 1.75rem;
+        border-radius: 1rem;
+        font-weight: 800;
+        font-family: 'Outfit', sans-serif;
+        font-size: 1rem;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.75rem;
+        box-shadow: 0 10px 20px -5px rgba(139, 92, 246, 0.5);
+        border: 2px solid rgba(255, 255, 255, 0.15);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .btn-home:hover {
+        transform: translateY(-3px) scale(1.02);
+        box-shadow: 0 20px 30px -8px rgba(139, 92, 246, 0.6);
+        border-color: rgba(255, 255, 255, 0.4);
+        background: linear-gradient(135deg, #a78bfa 0%, #7c3aed 100%);
+    }
 </style>
 
 <!-- Page Header -->
@@ -285,21 +333,11 @@
         <a href="{% url 'academic:add_course_group' %}" class="btn-premium">
             <span style="font-size: 1.5rem;">+</span> New Group
         </a>
-        <a href="{% url 'users:hod_dashboard' %}" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 1.25rem 2rem; border-radius: 1.25rem; backdrop-filter: blur(12px); font-weight: 800; font-family: 'Outfit', sans-serif; text-decoration: none; transition: 0.2s;">
-            Dashboard
+        <a href="{% url 'users:hod_dashboard' %}" class="btn-home">
+            <span style="font-size: 1.25rem;">🏠</span> Return to home
         </a>
     </div>
 </div>
-
-{% if messages %}
-<div style="margin-bottom: 3rem; padding: 0 1.5rem;">
-    {% for message in messages %}
-    <div style="padding: 1.75rem 2.5rem; border-radius: 1.5rem; background: rgba(16, 185, 129, 0.9); backdrop-filter: blur(10px); color: white; font-weight: 800; font-family: 'Outfit', sans-serif; font-size: 1.15rem; display: flex; align-items: center; gap: 1.25rem; box-shadow: 0 15px 30px rgba(16, 185, 129, 0.3);">
-        <span style="font-size: 1.8rem;">✅</span> {{ message }}
-    </div>
-    {% endfor %}
-</div>
-{% endif %}
 
 <!-- Main Card -->
 <div class="main-card">
@@ -390,4 +428,9 @@
         });
     });
 </script>
+<div style="margin-top: 5rem; text-align: center; border-top: 2px solid rgba(255,255,255,0.05); padding-top: 3rem;">
+    <a href="{% url 'users:hod_dashboard' %}" class="btn-home">
+        <span style="font-size: 1.25rem;">🏠</span> Return to home
+    </a>
+</div>
 {% endblock %}

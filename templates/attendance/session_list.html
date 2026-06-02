@@ -108,15 +108,6 @@
         </form>
     </div>
 
-    {% if messages %}
-    {% for message in messages %}
-    <div
-        style="padding: 1rem; margin-bottom: 1.5rem; border-radius: 0.5rem; background: rgba(34, 197, 94, 0.1); border: 1px solid #22c55e; color: #86efac;">
-        {{ message }}
-    </div>
-    {% endfor %}
-    {% endif %}
-
     <div style="overflow-x: auto;">
         <table class="session-table" style="width: 100%; border-collapse: separate; border-spacing: 0;">
             <thead>
@@ -138,70 +129,86 @@
                     </td>
                     <td style="padding: 1.25rem 1rem;">
                         {% if session.status == 'SCHEDULED' %}
-                            <span class="status-pill" style="background: #eff6ff; color: #3b82f6;">
-                                <span style="width: 8px; height: 8px; border-radius: 50%; background: #3b82f6;"></span>
-                        {% elif session.status == 'CONDUCTED' %}
-                            <span class="status-pill" style="background: #f0fdf4; color: #22c55e;">
+                            <span class="status-pill" style="background: #f1f5f9; color: #64748b;">
+                                <span style="width: 8px; height: 8px; border-radius: 50%; background: #94a3b8;"></span>
+                        {% elif session.status == 'IN_PROGRESS' %}
+                            <span class="status-pill" style="background: #e0f2fe; color: #0369a1;">
+                                <span style="width: 8px; height: 8px; border-radius: 50%; background: #0ea5e9;"></span>
+                        {% elif session.status == 'PENDING_VERIFICATION' %}
+                            <span class="status-pill" style="background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca;">
+                                <span style="width: 8px; height: 8px; border-radius: 50%; background: #ef4444; border: 1px solid white;"></span>
+                        {% elif session.status == 'CONDUCTED' or session.status == 'LECTURER_CONFIRMED' %}
+                            <span class="status-pill" style="background: #f0fdf4; color: #15803d;">
                                 <span style="width: 8px; height: 8px; border-radius: 50%; background: #22c55e;"></span>
                         {% elif session.status == 'SUBMITTED' %}
-                            <span class="status-pill" style="background: #fffbeb; color: #f59e0b;">
+                            <span class="status-pill" style="background: #fffbeb; color: #d97706;">
                                 <span style="width: 8px; height: 8px; border-radius: 50%; background: #f59e0b;"></span>
                         {% elif session.status == 'APPROVED' %}
-                            <span class="status-pill" style="background: #f0fdfa; color: #14b8a6;">
+                            <span class="status-pill" style="background: #f0fdfa; color: #0d9488;">
                                 <span style="width: 8px; height: 8px; border-radius: 50%; background: #14b8a6;"></span>
+                        {% elif session.status == 'AUTO_CONFIRMED' %}
+                            <span class="status-pill" style="background: #f3f4f6; color: #374151; border: 1px dashed #9ca3af;">
+                                <span style="width: 8px; height: 8px; border-radius: 50%; background: #4b5563;"></span>
                         {% else %}
                             <span class="status-pill" style="background: #fef2f2; color: #ef4444;">
                                 <span style="width: 8px; height: 8px; border-radius: 50%; background: #ef4444;"></span>
                         {% endif %}
                             {{ session.get_status_display }}
                         </span>
+                            {{ session.get_status_display }}
+                        </span>
                     </td>
                     <td style="padding: 1.25rem 1rem;">
                         <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
-                            <!-- Capture Action -->
-                            {% if session.status == 'SCHEDULED' or session.status == 'CONDUCTED' %}
-                            <a href="{% url 'attendance:capture_attendance' session.pk %}" class="btn-premium"
-                                style="padding: 0.4rem 0.8rem; font-size: 0.8rem; text-decoration: none;">
-                                {% if session.status == 'CONDUCTED' %}Edit Records{% else %}Capture Attendance{% endif %}
-                            </a>
-                            
-                            {% if user.role == 'COORDINATOR' and session.status == 'CONDUCTED' %}
-                            <form action="{% url 'attendance:upload_sheet' session.pk %}" method="post" enctype="multipart/form-data" style="display: flex; gap: 0.5rem; align-items: center; background: #f8fafc; padding: 0.25rem 0.5rem; border-radius: 0.5rem; border: 1px solid #e2e8f0;">
+                             <!-- Capture/Edit Action -->
+                             {% if session.status == 'SCHEDULED' or session.status == 'IN_PROGRESS' or session.status == 'PENDING_VERIFICATION' or session.status == 'CONDUCTED' %}
+                                 {% if user.role == 'COORDINATOR' and session.status == 'SCHEDULED' %}
+                                     <span class="status-pill" style="background: #f1f5f9; color: #64748b; font-size: 0.75rem; border: 1px solid #e2e8f0;">
+                                         ⏸ Locked
+                                     </span>
+                                 {% else %}
+                                     <a href="{% url 'attendance:capture_attendance' session.pk %}" class="btn-premium"
+                                         style="padding: 0.4rem 0.8rem; font-size: 0.8rem; text-decoration: none;">
+                                         {% if session.status == 'IN_PROGRESS' %}Continue{% elif session.status == 'SCHEDULED' %}Start{% else %}Record{% endif %}
+                                     </a>
+                                 {% endif %}
+                             {% endif %}
+
+                            {% if user.role == 'COORDINATOR' and session.status == 'PENDING_VERIFICATION' %}
+                            <form action="{% url 'attendance:upload_sheet' session.pk %}" method="post" enctype="multipart/form-data" style="display: flex; gap: 0.5rem; align-items: center; background: #fff1f2; padding: 0.25rem 0.5rem; border-radius: 0.5rem; border: 1px solid #fecaca;">
                                 {% csrf_token %}
                                 <input type="file" name="signed_sheet" style="font-size: 0.7rem; width: 140px;" required>
-                                <button type="submit" class="btn-premium" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; background: #3b82f6;">Upload Scan</button>
+                                <button type="submit" class="btn-premium" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; background: #ef4444;">Finalize Upload</button>
                             </form>
                             {% endif %}
-                            {% elif user.role == 'LECTURER' and session.status == 'SUBMITTED' %}
-                            <a href="{% url 'attendance:capture_attendance' session.pk %}" class="btn-premium"
-                                style="padding: 0.4rem 0.8rem; font-size: 0.8rem; background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; text-decoration: none;">
-                                Review Records
-                            </a>
-                            {% endif %}
     
+                            <!-- Teaching Staff Review / Validate -->
+                            {% if user.role == 'LECTURER' %}
+                                {% if session.status == 'SUBMITTED' or session.status == 'PENDING_VERIFICATION' %}
+                                    <div style="display: flex; gap: 1rem; align-items: center; background: white; padding: 0.5rem; border-radius: 0.75rem; border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                                        {% if session.signed_sheet %}
+                                        <a href="{{ session.signed_sheet.url }}" target="_blank" style="font-size: 0.75rem; color: #3b82f6; font-weight: 700;">📄 View Sheet</a>
+                                        {% endif %}
+                                        <form action="{% url 'attendance:validate_attendance' session.pk %}" method="post" style="display: flex; align-items: center; gap: 0.5rem;">
+                                            {% csrf_token %}
+                                            <input type="number" name="actual_duration" value="2.00" step="0.25" min="0.25" max="4.00" 
+                                                   style="width: 50px; font-size: 0.8rem; padding: 0.25rem; border-radius: 0.4rem; border: 1px solid #cbd5e1; text-align: center;">
+                                            <button type="submit" class="btn-premium"
+                                                style="padding: 0.35rem 0.75rem; font-size: 0.75rem; background: {% if session.status == 'PENDING_VERIFICATION' %}#ef4444{% else %}#10b981{% endif %};">
+                                                {% if session.status == 'PENDING_VERIFICATION' %}Review & Approve{% else %}Approve{% endif %}
+                                            </button>
+                                        </form>
+                                    </div>
+                                {% endif %}
+                            {% endif %}
+
                             <!-- Coordinator Submit -->
-                            {% if user.role == 'COORDINATOR' and session.status == 'CONDUCTED' %}
+                            {% if user.role == 'COORDINATOR' and session.status == 'PENDING_VERIFICATION' %}
                             <form action="{% url 'attendance:submit_validation' session.pk %}" method="post">
                                 {% csrf_token %}
                                 <button type="submit" class="btn-premium"
                                     style="padding: 0.4rem 0.8rem; font-size: 0.8rem; background: #f59e0b;">Submit for Validation</button>
                             </form>
-                            {% endif %}
-    
-                            <!-- Teaching Staff Validate -->
-                            {% if user.role == 'LECTURER' and session.status == 'SUBMITTED' %}
-                            <div style="display: flex; gap: 1rem; align-items: center;">
-                                {% if session.signed_sheet %}
-                                <a href="{{ session.signed_sheet.url }}" target="_blank" style="font-size: 0.75rem; color: #3b82f6; font-weight: 600;">View Sheet</a>
-                                {% endif %}
-                                <form action="{% url 'attendance:validate_attendance' session.pk %}" method="post" style="display: flex; align-items: center; gap: 0.75rem;">
-                                    {% csrf_token %}
-                                    <input type="number" name="actual_duration" value="2.00" step="0.25" min="0.25" max="4.00" 
-                                           style="width: 60px; font-size: 0.8rem; padding: 0.3rem; border-radius: 0.5rem; border: 1px solid #e2e8f0; text-align: center;" title="Duration (Hrs)">
-                                    <button type="submit" class="btn-premium"
-                                        style="padding: 0.4rem 0.8rem; font-size: 0.8rem; background: #22c55e;">Approve</button>
-                                </form>
-                            </div>
                             {% endif %}
                         </div>
                     </td>
